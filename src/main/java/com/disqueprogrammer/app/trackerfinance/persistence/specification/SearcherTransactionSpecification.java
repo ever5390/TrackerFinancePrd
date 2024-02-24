@@ -21,7 +21,7 @@ public class SearcherTransactionSpecification implements Specification<Transacti
 
     static final Logger LOG = LoggerFactory.getLogger(SearcherTransactionSpecification.class);
 
-    private Long userIdParam;
+    private Long WorkspaceIdParam;
     private LocalDateTime startDate;
     private LocalDateTime  endDate;
     private TypeEnum type;
@@ -39,9 +39,9 @@ public class SearcherTransactionSpecification implements Specification<Transacti
     public Predicate toPredicate(Root<Transaction> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
         List<Predicate> predicates = new ArrayList<>();
 
-        Expression<Long> transactionUserId = root.get("userId");
-        Predicate userIdPredicate = criteriaBuilder.equal(transactionUserId, userIdParam);
-        predicates.add(userIdPredicate);
+        Expression<Long> transactionWorkspaceId = root.get("workspaceId");
+        Predicate WorkspaceIdPredicate = criteriaBuilder.equal(transactionWorkspaceId, WorkspaceIdParam);
+        predicates.add(WorkspaceIdPredicate);
 
         if (startDate != null) {
             Expression<LocalDateTime> transactionStartDate = root.get("createAt");
@@ -93,14 +93,14 @@ public class SearcherTransactionSpecification implements Specification<Transacti
             predicates.add(categoryPredicate);
         }
 
-
+/*
         if(StringUtils.hasText(segment)) {
             Join<Transaction, Segment> transactionSegmentJoin = root.join("segment");
             Expression<String> segmentNameToLowerCase = criteriaBuilder.lower(transactionSegmentJoin.get("name"));
             Predicate segmentPredicate = criteriaBuilder.like(segmentNameToLowerCase, "%".concat(segment.toLowerCase()).concat("%"));
             predicates.add(segmentPredicate);
         }
-
+*/
 
         if (StringUtils.hasText(paymentMethod)) {
             Join<Transaction, PaymentMethod> transactionPaymentMethodJoin = root.join("paymentMethod", JoinType.LEFT);

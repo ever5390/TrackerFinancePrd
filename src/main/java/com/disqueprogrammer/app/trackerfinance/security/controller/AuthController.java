@@ -1,9 +1,8 @@
 package com.disqueprogrammer.app.trackerfinance.security.controller;
 
-import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.EmailExistsException;
+import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
+import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.*;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.ExceptionHandling;
-import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameExistsException;
-import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.security.Jwt.JwtService;
 import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
 import com.disqueprogrammer.app.trackerfinance.security.service.AuthService;
@@ -43,18 +42,25 @@ public class AuthController extends ExceptionHandling {
     }
 
     @PostMapping(value = "register")
-    public ResponseEntity<HttpResponse> register(@RequestBody RegisterRequest request) throws UserNameExistsException, EmailExistsException {
-        return new ResponseEntity<>(authService.register(request), HttpStatus.CREATED);
+    public ResponseEntity<HttpResponse> register(@RequestBody RegisterRequest request) throws EmailNotFoundException, UserNameNotFoundException {
+        return new ResponseEntity<>(userService.registerUserSuperAdmin(request), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAuthority('user:create')")
-    @PostMapping(value = "newUser")
-    public ResponseEntity<HttpResponse> registerNewUser(@RequestBody RegisterRequest request) throws UserNameExistsException, EmailExistsException {
-        return new ResponseEntity<>(userService.registerNewUser(request), HttpStatus.CREATED);
+    //@PreAuthorize("hasAuthority('user:create')")
+    @PreAuthorize("isAuthenticated() and hasAuthority('user:create')")
+    @PostMapping("/users/{userParentId}/newUser")
+    public ResponseEntity<HttpResponse> registerNewUser(@PathVariable("userParentId") Long userParentId, @RequestBody RegisterRequest request) throws UserNameExistsException, EmailExistsException, CustomException {
+        return new ResponseEntity<>(userService.registerNewUser(userParentId, request), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("isAuthenticated() and not hasRole('ROLE_USER')")
-    @GetMapping("/users")
+    //@PreAuthorize("isAuthenticated() and hasAuthority('user:create')")
+    @PreAuthorize("isAuthenticated() and hasAuthority('ROLE_SUPER_ADMIN')")
+    @GetMapping("/users/{userParentId}")
+    public List<User> findByUserParent(@PathVariable("userParentId") Long userParentId) throws UserNotFoundException {
+        return this.userService.findByUserParent(userParentId);
+    }
+
+    @GetMapping("/users/all")
     public List<User> showUsers() {
         return this.userService.showUsers();
     }

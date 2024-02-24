@@ -8,9 +8,9 @@ import java.util.List;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
-    Category findByNameAndUserId(String name, Long userId);
+    Category findByNameAndWorkspaceId(String name, Long workspaceId);
 
-    Category findByIdAndUserId(Long categorId, Long userId);
+    Category findByIdAndWorkspaceId(Long categorId, Long workspaceId);
 
-    List<Category> findByUserId(Long userId);
+    List<Category> findByWorkspaceId(Long workspaceId);
 }

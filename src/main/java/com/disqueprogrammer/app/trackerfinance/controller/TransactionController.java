@@ -3,16 +3,14 @@ package com.disqueprogrammer.app.trackerfinance.controller;
 import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountEqualsException;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.InsuficientFundsException;
-import com.disqueprogrammer.app.trackerfinance.exception.domain.UnspecifiedMemberException;
+import com.disqueprogrammer.app.trackerfinance.exception.domain.UnspecifiedCounterpartException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
-import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
-import com.disqueprogrammer.app.trackerfinance.security.service.AuthService;
-import com.disqueprogrammer.app.trackerfinance.service.impl.transactions.TransactionSaveServiceImpl;
+import com.disqueprogrammer.app.trackerfinance.service.interfaz.WorkspaceService;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction.*;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -30,7 +28,7 @@ import java.util.List;
 @RestController
 @CrossOrigin(origins = {"http://localhost:4200"})
 @Validated
-@RequestMapping("/api/v2/user/{userId}/transactions")
+@RequestMapping("/api/v2/workspace/{workspaceId}/transactions")
 public class TransactionController {
 
     private final static Logger LOG = LoggerFactory.getLogger(TransactionController.class);
@@ -46,39 +44,54 @@ public class TransactionController {
 
     private final ITransactionFiltersService transactionFiltersService;
 
-    private final AuthService authService;
+    private final WorkspaceService workspaceService;
 
     @PostMapping
-    public ResponseEntity<Transaction> save(@PathVariable("userId") Long userId, @RequestBody Transaction transactionRequest) throws UnspecifiedMemberException, ObjectNotFoundException, AccountEqualsException, CustomException, InsuficientFundsException {
+    public ResponseEntity<Transaction> save(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction transactionRequest) throws UnspecifiedCounterpartException, AccountEqualsException, CustomException, InsuficientFundsException {
         LOG.info("inicio transacción");
 
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        transactionRequest.setUserId(userId);
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        transactionRequest.setWorkspaceId(workspaceId);
         return new ResponseEntity<>(transactionSaveService.save(transactionRequest), HttpStatus.CREATED);
     }
 
+    @PostMapping("/recurring")
+    public ResponseEntity<String> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        nextTransactionRecurring.setWorkspaceId(workspaceId);
+        transactionSaveService.saveNewTransactionRecurring(nextTransactionRecurring);
+        return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<Transaction> update(@PathVariable("userId") Long userId, @PathVariable("id") Long idTransaction, @Valid @RequestBody Transaction transactionRequest) throws ObjectNotFoundException, CustomException, InsuficientFundsException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
+    public ResponseEntity<Transaction> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction, @Valid @RequestBody Transaction transactionRequest) throws CustomException, InsuficientFundsException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
         return new ResponseEntity<>(transactionUpdateService.update(transactionRequest, idTransaction), HttpStatus.OK);
     }
 
+    @PutMapping("/recurring/{id}")
+    public ResponseEntity<Transaction> updateTxRecurring(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransactionReqToUpdate, @RequestBody Transaction nextTransactionRecurring) throws Exception {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        nextTransactionRecurring.setWorkspaceId(workspaceId);
+        return new ResponseEntity<Transaction>(transactionUpdateService.updateTransactionRecurring(nextTransactionRecurring, idTransactionReqToUpdate), HttpStatus.CREATED);
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("userId") Long userId, @PathVariable("id") Long idTransaction) throws ObjectNotFoundException, CustomException, InsuficientFundsException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        transactionDeleteService.delete(idTransaction, userId);
+    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction) throws CustomException, InsuficientFundsException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        transactionDeleteService.delete(idTransaction, workspaceId);
         return new ResponseEntity<>("Transaction was deleted successfully!!", HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Transaction> findById(@PathVariable("id") Long idTransaction, @PathVariable("userId") Long userId) throws ObjectNotFoundException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        return new ResponseEntity<>(transactionGetService.findByIdAndUserId(idTransaction, userId), HttpStatus.OK);
+    public ResponseEntity<Transaction> findById(@PathVariable("id") Long idTransaction, @PathVariable("workspaceId") Long workspaceId) throws CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<>(transactionGetService.findByIdAndWorkspaceId(idTransaction, workspaceId), HttpStatus.OK);
     }
 
     @GetMapping("/filters")
     public ResponseEntity<ResumeMovementDto> findMovementsByFilters(
-            @PathVariable("userId") Long userIdParam,
+            @PathVariable("workspaceId") Long WorkspaceIdParam,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) TypeEnum type,
@@ -92,30 +105,30 @@ public class TransactionController {
             @RequestParam(required = false) ActionEnum action
     ) throws Exception {
 
-        authService.validateUserIdRequestIsEqualsUserIdToken(userIdParam);
+        workspaceService.validationWorkspaceUserRelationship(WorkspaceIdParam);
 
-        ResumeMovementDto resumeMovementDto = transactionFiltersService.findMovementsByFilters(userIdParam, startDate,
+        ResumeMovementDto resumeMovementDto = transactionFiltersService.findMovementsByFilters(WorkspaceIdParam, startDate,
                 endDate, type, status, category, description, segment, account, paymentMethod, block, action);
         return new ResponseEntity<>(resumeMovementDto, HttpStatus.OK);
 
     }
 
     @GetMapping("/resume")
-    public ResponseEntity<ResumeMovementDto> findResumenByUserId(@PathVariable("userId") Long userId) throws Exception {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        return new ResponseEntity<>(transactionGetService.findByUserId(userId), HttpStatus.OK);
+    public ResponseEntity<ResumeMovementDto> findResumenByWorkspaceId(@PathVariable("workspaceId") Long workspaceId) throws Exception {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<>(transactionGetService.findByWorkspaceId(workspaceId), HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<Transaction>> findAllTxByUserId(@PathVariable("userId") Long userId) throws Exception {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        return new ResponseEntity<List<Transaction>>(transactionGetService.findAllTxByUserId(userId), HttpStatus.OK);
+    public ResponseEntity<List<Transaction>> findAllTxByWorkspaceId(@PathVariable("workspaceId") Long workspaceId) throws Exception {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<List<Transaction>>(transactionGetService.findAllTxByWorkspaceId(workspaceId), HttpStatus.OK);
     }
 
 
     @GetMapping("/loan-pending")
-    public ResponseEntity<List<Transaction>> findByTypeAndStatusAndUserId(@PathVariable("userId") Long userId, @RequestParam TypeEnum type, @RequestParam StatusEnum status) throws Exception {
-        return new ResponseEntity<>(transactionGetService.findByTypeAndStatusAndUserId(type, status, userId), HttpStatus.OK);
+    public ResponseEntity<List<Transaction>> findByTypeAndStatusAndWorkspaceId(@PathVariable("workspaceId") Long workspaceId, @RequestParam TypeEnum type, @RequestParam StatusEnum status) throws Exception {
+        return new ResponseEntity<>(transactionGetService.findByTypeAndStatusAndWorkspaceId(type, status, workspaceId), HttpStatus.OK);
     }
 
 }

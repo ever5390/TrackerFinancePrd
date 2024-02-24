@@ -4,6 +4,7 @@ import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountNotFoundE
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.EmailExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameNotFoundException;
+import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.security.dtoAuth.HttpResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import org.slf4j.Logger;
@@ -29,6 +30,11 @@ public class ExceptionHandling implements ErrorController {
 
     @ExceptionHandler(EmailExistsException.class)
     public ResponseEntity<HttpResponse> emailExistException (EmailExistsException exception) {
+        return createHttpResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<HttpResponse> userNotFoundException (UserNotFoundException exception) {
         return createHttpResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 

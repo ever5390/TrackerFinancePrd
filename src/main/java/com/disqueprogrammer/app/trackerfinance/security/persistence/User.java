@@ -11,7 +11,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Date;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.stream;
@@ -64,6 +63,10 @@ public class User implements UserDetails {
         isNotLocked = notLocked;
     }
 
+    @ManyToOne
+    @JoinColumn(name = "user_parent_id")
+    private User userParent;
+
     public User() {}
 
 
@@ -101,6 +104,7 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return this.isActive;
     }
+
 
 
 }

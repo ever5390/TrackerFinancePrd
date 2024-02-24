@@ -35,16 +35,16 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     }
 
     private void validateAccountAssoc(PaymentMethod paymentMethodRequest) throws AccountNotFoundException {
-        Account account = accountRepository.findByIdAndUserId(paymentMethodRequest.getAccount().getId(), paymentMethodRequest.getAccount().getUserId());
+        Account account = accountRepository.findByIdAndWorkspaceId(paymentMethodRequest.getAccount().getId(), paymentMethodRequest.getAccount().getWorkspaceId());
         if(account == null) {
             throw new AccountNotFoundException("La cuenta asociada no ha sido encontrada");
         }
     }
 
     @Override
-    public PaymentMethod findByIdAndUserId(Long paymentMethodId, Long userId) throws ObjectNotFoundException {
+    public PaymentMethod findByIdAndWorkspaceId(Long paymentMethodId, Long workspaceId) throws ObjectNotFoundException {
 
-        PaymentMethod paymentMethod = paymentMethodRepository.findByIdAndUserId(paymentMethodId, userId);
+        PaymentMethod paymentMethod = paymentMethodRepository.findByIdAndWorkspaceId(paymentMethodId, workspaceId);
         if(paymentMethod == null) {
             throw new ObjectNotFoundException("El medio de pago no ha sido encontrado");
         }
@@ -52,8 +52,8 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     }
 
     @Override
-    public List<PaymentMethod> findByUserId(Long userId) {
-        return paymentMethodRepository.findByUserId(userId);
+    public List<PaymentMethod> findByWorkspaceId(Long workspaceId) {
+        return paymentMethodRepository.findByWorkspaceId(workspaceId);
     }
 
     @Override
@@ -78,14 +78,14 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     }
 
     @Override
-    public void delete(Long paymentMethodId, Long userId) throws ObjectNotFoundException, CustomException {
+    public void delete(Long paymentMethodId, Long workspaceId) throws ObjectNotFoundException, CustomException {
 
         Optional<PaymentMethod> paymentMethodFounded = paymentMethodRepository.findById(paymentMethodId);
         if(paymentMethodFounded.isEmpty()) {
             throw new ObjectNotFoundException("El medio de pago seleccionado no ha sido encontrado");
         }
 
-        List<Transaction> transactionsByPaymentMethodId = transactionRepository.findTransactionsByPaymentMethodIdAndUserId(paymentMethodId, userId);
+        List<Transaction> transactionsByPaymentMethodId = transactionRepository.findTransactionsByPaymentMethodIdAndWorkspaceId(paymentMethodId, workspaceId);
 
         if(!transactionsByPaymentMethodId.isEmpty()) {
             throw new CustomException("Se encontraron operaciones asociadas a este medio de pago, no es posible eliminar.");
@@ -96,7 +96,7 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     
     private void validateDuplicatedName(PaymentMethod paymentMethodRequest) throws ObjectExistsException {
 
-        PaymentMethod paymentMethodNameRepeated = paymentMethodRepository.findByNameAndUserId(paymentMethodRequest.getName().toUpperCase(), paymentMethodRequest.getAccount().getUserId());
+        PaymentMethod paymentMethodNameRepeated = paymentMethodRepository.findByNameAndWorkspaceId(paymentMethodRequest.getName().toUpperCase(), paymentMethodRequest.getAccount().getWorkspaceId());
         if(paymentMethodNameRepeated != null) {
             throw new ObjectExistsException("Ya existe un método de pago con el nombre que intentas registrar");
         }

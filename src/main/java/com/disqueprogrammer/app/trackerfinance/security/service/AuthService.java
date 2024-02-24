@@ -1,11 +1,13 @@
 package com.disqueprogrammer.app.trackerfinance.security.service;
 
+import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.Workspace;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.WorkspaceRepository;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.EmailExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameNotFoundException;
-import com.disqueprogrammer.app.trackerfinance.security.persistence.Role;
-import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
+import com.disqueprogrammer.app.trackerfinance.security.persistence.*;
 import com.disqueprogrammer.app.trackerfinance.security.dtoAuth.AuthResponse;
 import com.disqueprogrammer.app.trackerfinance.security.dtoAuth.HttpResponse;
 import com.disqueprogrammer.app.trackerfinance.security.dtoAuth.LoginRequest;
@@ -23,7 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.disqueprogrammer.app.trackerfinance.security.Jwt.JwtService;
-import com.disqueprogrammer.app.trackerfinance.security.persistence.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -54,18 +55,13 @@ public class AuthService {
         //Este devuelve un tipo AuthenticationManager ya que lo implementa.
         //Internamente este AuthenticationManager utiliza una lista de mecanismos de authenticación y nosotros ya inyectamos el DaoAuthenticationProvider.
 
-        LOGGER.info("Paso 0" + request.toString());
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-        LOGGER.info("Paso 1");
         User user = userRepository.findByUsername(request.getUsername()).get();
-        LOGGER.info("Paso 2");
         user.setLastLoginDateDisplay(user.getLastLoginDate());
         user.setLastLoginDate(LocalDateTime.now());
         userRepository.save(user);
-        LOGGER.info("Paso 3");
         String token = jwtService.generateToken(user);
-        LOGGER.info("Paso 4");
         return AuthResponse.builder()
                 .token(token)
                 .build();
@@ -107,12 +103,9 @@ public class AuthService {
         }
     }
 
-    public void validateUserIdRequestIsEqualsUserIdToken(Long userIdRequest) {
+    public User getUserAuthenticated() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User userAuthenticado = (User) authentication.getPrincipal();
-        if(!Objects.equals(userAuthenticado.getId(), userIdRequest)) {
-            throw new AccessDeniedException("No tienes permisos para acceder a este recurso.");
-        }
+        return (User) authentication.getPrincipal();
     }
 
 }

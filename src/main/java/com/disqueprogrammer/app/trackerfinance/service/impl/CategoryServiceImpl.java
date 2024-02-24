@@ -33,9 +33,9 @@ public class CategoryServiceImpl implements ICategoryService {
     }
 
     @Override
-    public Category findByIdAndUserId(Long categoryId, Long userId) throws CategoryNotFoundException {
+    public Category findByIdAndWorkspaceId(Long categoryId, Long workspaceId) throws CategoryNotFoundException {
 
-        Category category = categoryRepository.findByIdAndUserId(categoryId, userId);
+        Category category = categoryRepository.findByIdAndWorkspaceId(categoryId, workspaceId);
 
         if (category == null) {
             LOG.info(":::::::: No se encontró la categoría seleccionada :::::");
@@ -46,8 +46,8 @@ public class CategoryServiceImpl implements ICategoryService {
     }
 
     @Override
-    public List<Category> findByUserId(Long userId) {
-        return categoryRepository.findByUserId(userId);
+    public List<Category> findByWorkspaceId(Long workspaceId) {
+        return categoryRepository.findByWorkspaceId(workspaceId);
     }
 
     @Override
@@ -71,8 +71,8 @@ public class CategoryServiceImpl implements ICategoryService {
     }
 
     @Override
-    public void delete(Long categoryId, Long userId) throws CategoryNotFoundException {
-        Category optionalCategory = categoryRepository.findByIdAndUserId(categoryId, userId);
+    public void delete(Long categoryId, Long workspaceId) throws CategoryNotFoundException {
+        Category optionalCategory = categoryRepository.findByIdAndWorkspaceId(categoryId, workspaceId);
 
         if (optionalCategory == null) {
             throw new CategoryNotFoundException("No se encontró la categoría que desea eliminar");
@@ -83,7 +83,7 @@ public class CategoryServiceImpl implements ICategoryService {
 
     private void validateDuplicatedName(Category categoryRequest) throws CategoryExistsException {
 
-        Category categoryNameRepeated = categoryRepository.findByNameAndUserId(categoryRequest.getName().toUpperCase(), categoryRequest.getUserId());
+        Category categoryNameRepeated = categoryRepository.findByNameAndWorkspaceId(categoryRequest.getName().toUpperCase(), categoryRequest.getWorkspaceId());
         if(categoryNameRepeated != null) {
             throw new CategoryExistsException("Ya existe una categoría con el nombre que intentas registrar");
         }

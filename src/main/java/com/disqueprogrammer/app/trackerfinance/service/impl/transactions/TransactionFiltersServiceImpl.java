@@ -48,7 +48,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
     }
 
     @Override
-    public ResumeMovementDto findMovementsByFilters(Long userIdParam, String startDate, String endDate, TypeEnum type, StatusEnum status, String category, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action) throws Exception {
+    public ResumeMovementDto findMovementsByFilters(Long WorkspaceIdParam, String startDate, String endDate, TypeEnum type, StatusEnum status, String category, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action) throws Exception {
 
         ResumeMovementDto resumeMovementDto = new ResumeMovementDto();
 
@@ -63,7 +63,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
         LOGGER.info("::: startDateD: "+startDateD);
         LOGGER.info("::: endDateD: "+endDateD);
 
-        SearcherTransactionSpecification specification = new SearcherTransactionSpecification(userIdParam, startDateD,
+        SearcherTransactionSpecification specification = new SearcherTransactionSpecification(WorkspaceIdParam, startDateD,
                 endDateD, type, status, category, description, segment, account, paymentMethod, block, action);
 
         List<Transaction> transactions = transactionRepository.findAll(specification);
@@ -99,8 +99,8 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
                 if(transactions.get(i).getType().equals(TypeEnum.LOAN)) descriptionToShow+="PRÉSTAMO";
                 if(transactions.get(i).getType().equals(TypeEnum.PAYMENT)) descriptionToShow+="PAGO";
 
-                if(transactions.get(i).getAction().equals(ActionEnum.RECIBÍ)) descriptionToShow+=" de " + transactions.get(i).getMember().getName();
-                if(transactions.get(i).getAction().equals(ActionEnum.REALICÉ)) descriptionToShow+=" a " + transactions.get(i).getMember().getName();
+                if(transactions.get(i).getAction().equals(ActionEnum.RECIBÍ)) descriptionToShow+=" de " + transactions.get(i).getCounterpart().getName();
+                if(transactions.get(i).getAction().equals(ActionEnum.REALICÉ)) descriptionToShow+=" a " + transactions.get(i).getCounterpart().getName();
             }
 
             if(transactions.get(i).getType().equals(TypeEnum.TRANSFERENCE)) {
@@ -185,8 +185,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
             movementDto.setCreateAt(transactions.get(i).getCreateAt());
             movementDto.setType(transactions.get(i).getType());
             movementDto.setAction(transactions.get(i).getAction());
-            movementDto.setCategory(transactions.get(i).getCategory() != null?transactions.get(i).getCategory().getName():"");
-            movementDto.setSegment(transactions.get(i).getSegment() != null?transactions.get(i).getSegment().getName():"");
+            movementDto.setCategory(transactions.get(i).getSubCategory() != null?transactions.get(i).getSubCategory().getName():"");
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod() != null ? transactions.get(i).getPaymentMethod().getName(): "");
             movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
             movementsDto.add(movementDto);

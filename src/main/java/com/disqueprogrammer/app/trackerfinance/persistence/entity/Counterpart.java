@@ -1,7 +1,7 @@
 package com.disqueprogrammer.app.trackerfinance.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+        import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,9 +9,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@NoArgsConstructor
 @Entity
-public class Member {
+public class Counterpart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,6 +19,6 @@ public class Member {
 
     private String email;
 
-    private Long userId;
+    private Long workspaceId;
 
 }

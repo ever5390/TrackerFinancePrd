@@ -21,13 +21,9 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "El campo nombre no puede ser nulo")
-    @NotEmpty(message = "El campo nombre no puede ser vacío")
     private String name;
 
-    @NotNull(message = "El campo balance no puede ser nulo")
-    @NotEmpty(message = "El campo balance no puede ser vacío")
     private double currentBalance;
 
-    private Long userId;
+    private Long workspaceId;
 }

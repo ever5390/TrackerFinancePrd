@@ -16,7 +16,6 @@ import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,59 +32,33 @@ public class AccountServiceImpl implements IAccountService {
 
     @Override
     public Account save(Account accountRequest) throws NotAllowedAccountBalanceException, AccountNotFoundException, AccountExistsException, NotNumericException, CustomException {
-
-        try {
-            validateBalance(accountRequest);
-            validateDuplicatedName(accountRequest);
-
-            return accountRepository.save(accountRequest);
-        } catch (HttpMessageNotReadableException e) {
-            LOGGER.info("ERROR CATCHED PARSE: " + e.getMessage());
-            throw new CustomException(e.getMessage());
-        } catch (Exception e) {
-            LOGGER.info("ERROR CATCHED: " + e.getMessage());
-            throw new CustomException(e.getMessage());
-        }
+        validateBalance(accountRequest);
+        validateDuplicatedName(accountRequest);
+        return accountRepository.save(accountRequest);
     }
 
     private void validateDuplicatedName(Account accountRequest) throws AccountExistsException, NotAllowedAccountBalanceException, AccountNotFoundException, CustomException {
 
         if(StringUtils.isEmpty(accountRequest.getName())) throw new CustomException("Ingrese un nombre para su cuenta por favor.");
-        Account duplicatedNameAccount = accountRepository.findByNameAndUserId(accountRequest.getName().toUpperCase(), accountRequest.getUserId());
+        Account duplicatedNameAccount = accountRepository.findByNameAndWorkspaceId(accountRequest.getName().toUpperCase(), accountRequest.getWorkspaceId());
 
-        if(duplicatedNameAccount != null) {
-            throw new AccountExistsException("Ya existe una cuenta con el nombre que intentas registrar");
-        }
+        if(duplicatedNameAccount != null) throw new AccountExistsException("Ya existe una cuenta con el nombre que intentas registrar");
     }
 
     private void validateBalance(Account accountRequest) throws NotNumericException, NotAllowedAccountBalanceException {
-
-        try {
-            if(accountRequest.getCurrentBalance() <= 0) {
-                throw new NotAllowedAccountBalanceException("La cuenta debe tener un monto asignado mayor a 0");
-            }
-        } catch (Exception e) {
-            LOGGER.error("ERROR CATCHED IN METHOD: " + e.getMessage());
-            throw new NotNumericException("La cuenta debe tener un monto asignado mayor a 0");
-        }
-
+        if(accountRequest.getCurrentBalance() <= 0) throw new NotAllowedAccountBalanceException("La cuenta debe tener un monto asignado mayor a 0");
     }
 
     @Override
-    public Account findByIdAndUserId(Long accountId, Long userId) throws AccountNotFoundException {
-
-        Account accountFounded = accountRepository.findByIdAndUserId(accountId, userId);
-
-        if (accountFounded == null) {
-            throw new AccountNotFoundException("No se encontró la cuenta seleccionada");
-        }
-
+    public Account findByIdAndWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException {
+        Account accountFounded = accountRepository.findByIdAndWorkspaceId(accountId, workspaceId);
+        if (accountFounded == null) throw new AccountNotFoundException("No se encontró la cuenta seleccionada");
         return accountFounded;
     }
 
     @Override
-    public List<Account> findByUserId(Long userId) {
-        return accountRepository.findByUserId(userId);
+    public List<Account> findByWorkspaceId(Long workspaceId) {
+        return accountRepository.findByWorkspaceId(workspaceId);
     }
 
     @Override
@@ -103,12 +76,12 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     @Override
-    public void delete(Long accountId, Long userId) throws AccountNotFoundException, CustomException {
+    public void delete(Long accountId, Long workspaceId) throws AccountNotFoundException, CustomException {
 
-        Account accountFounded = accountRepository.findByIdAndUserId(accountId, userId);
+        Account accountFounded = accountRepository.findByIdAndWorkspaceId(accountId, workspaceId);
         if(accountFounded == null ) throw new AccountNotFoundException("No se encontró la cuenta que intentas eliminar");
 
-        validateIfExistTransactionsAssocThisAccount(accountFounded.getId(), userId);
+        validateIfExistTransactionsAssocThisAccount(accountFounded.getId(), workspaceId);
 
         //Deletes payments-methods assoc
         paymentRepository.deleteAllByIdAccount(accountFounded.getId());
@@ -116,8 +89,8 @@ public class AccountServiceImpl implements IAccountService {
         accountRepository.deleteById(accountFounded.getId());
     }
 
-    private void validateIfExistTransactionsAssocThisAccount(Long accountId, Long userId) throws CustomException {
-        List<Transaction> transactionsByAccount = transactionRepository.findTransactionsByAccountIdAndUserId(accountId, userId);
+    private void validateIfExistTransactionsAssocThisAccount(Long accountId, Long workspaceId) throws CustomException {
+        List<Transaction> transactionsByAccount = transactionRepository.findTransactionsByAccountIdAndWorkspaceId(accountId, workspaceId);
         if(!transactionsByAccount.isEmpty()) {
             throw new CustomException("Se encontraron operaciones asociadas a esta cuenta, no es posible eliminar la cuenta.");
         }

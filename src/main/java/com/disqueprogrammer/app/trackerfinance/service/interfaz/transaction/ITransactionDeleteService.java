@@ -8,5 +8,5 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
 import java.util.List;
 
 public interface ITransactionDeleteService {
-    void delete(Long transactionId, Long userId) throws CustomException, ObjectNotFoundException, InsuficientFundsException;
+    void delete(Long transactionId, Long workspaceId) throws CustomException, InsuficientFundsException;
 }

@@ -6,8 +6,8 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.PaymentMethod;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectExistsException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.ExceptionHandling;
-import com.disqueprogrammer.app.trackerfinance.security.service.AuthService;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.IPaymentMethodService;
+import com.disqueprogrammer.app.trackerfinance.service.interfaz.WorkspaceService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,44 +20,44 @@ import java.util.List;
 @AllArgsConstructor
 @RestController
 @CrossOrigin(origins = {"http://localhost:4200"})
-@RequestMapping("/api/v2/user/{userId}/payment-methods")
+@RequestMapping("/api/v2/workspace/{workspaceId}/payment-methods")
 @Validated
 public class PaymentMethodController extends ExceptionHandling {
 
     private final IPaymentMethodService paymentMethodService;
 
-    private final AuthService authService;
+    private final WorkspaceService workspaceService;
 
     @PostMapping
-    public ResponseEntity<PaymentMethod> save(@PathVariable("userId") Long userId, @Valid  @RequestBody PaymentMethod memberReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        memberReq.getAccount().setUserId(userId);
-        return new ResponseEntity<>(paymentMethodService.save(memberReq), HttpStatus.CREATED);
+    public ResponseEntity<PaymentMethod> save(@PathVariable("workspaceId") Long workspaceId, @Valid  @RequestBody PaymentMethod counterpartReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        counterpartReq.getAccount().setWorkspaceId(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.save(counterpartReq), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PaymentMethod> update(@PathVariable("userId") Long userId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod memberReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        memberReq.getAccount().setUserId(userId);
-        return new ResponseEntity<>(paymentMethodService.update(memberReq, idPaymentMethod), HttpStatus.OK);
+    public ResponseEntity<PaymentMethod> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod counterpartReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        counterpartReq.getAccount().setWorkspaceId(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.update(counterpartReq, idPaymentMethod), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("userId") Long userId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        paymentMethodService.delete(idPaymentMethod, userId);
+    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        paymentMethodService.delete(idPaymentMethod, workspaceId);
         return new ResponseEntity<>("PaymentMethod was deleted successfully!!", HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<PaymentMethod>> findAll(@PathVariable("userId") Long userId) {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        return new ResponseEntity<>(paymentMethodService.findByUserId(userId), HttpStatus.OK);
+    public ResponseEntity<List<PaymentMethod>> findAll(@PathVariable("workspaceId") Long workspaceId) throws CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.findByWorkspaceId(workspaceId), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PaymentMethod> findById(@PathVariable("userId") Long userId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException {
-        authService.validateUserIdRequestIsEqualsUserIdToken(userId);
-        return new ResponseEntity<>(paymentMethodService.findByIdAndUserId(idPaymentMethod, userId), HttpStatus.OK);
+    public ResponseEntity<PaymentMethod> findById(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.findByIdAndWorkspaceId(idPaymentMethod, workspaceId), HttpStatus.OK);
     }
 }

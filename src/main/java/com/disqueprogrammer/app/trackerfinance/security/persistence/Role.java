@@ -4,8 +4,11 @@ import static com.disqueprogrammer.app.trackerfinance.security.Constant.Authorit
 
 public enum Role {
 
+	ROLE_SUPER_ADMIN(ADMIN_AUTHORITIES),
+	ROLE_ADMIN(ADMIN_AUTHORITIES),
 	ROLE_USER(USER_AUTHORITIES),
-	ROLE_ADMIN(ADMIN_AUTHORITIES);
+	ROLE_USER_LEVEL_TWO(USER_LEVEL_TWO_AUTHORITIES),
+	ROLE_USER_LEVEL_THREE(USER_LEVEL_THREE_AUTHORITIES);
 
 	private String[] authorities;
 

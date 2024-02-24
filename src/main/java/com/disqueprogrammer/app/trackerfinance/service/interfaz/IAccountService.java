@@ -13,8 +13,8 @@ import java.util.List;
 public interface IAccountService {
     Account save(Account account) throws NotAllowedAccountBalanceException, AccountNotFoundException, AccountExistsException, NotNumericException, CustomException;
 
-    Account findByIdAndUserId(Long accountId, Long userId) throws AccountNotFoundException;
-    List<Account> findByUserId(Long userId);
+    Account findByIdAndWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException;
+    List<Account> findByWorkspaceId(Long workspaceId);
 
     Account update(Account account,  Long idAccount) throws AccountNotFoundException, NotAllowedAccountBalanceException, AccountExistsException, NotNumericException, NewBalanceLessThanCurrentBalanceException, CustomException;
 

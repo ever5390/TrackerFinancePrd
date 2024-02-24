@@ -66,8 +66,8 @@ public class GlobalExceptionHandler {
         return createHttpResponse(exception.getMessage());
     }
 
-    @ExceptionHandler(UnspecifiedMemberException.class)
-    public ResponseEntity<HttpResponse> unspecifiedMemberException (UnspecifiedMemberException exception) {
+    @ExceptionHandler(UnspecifiedCounterpartException.class)
+    public ResponseEntity<HttpResponse> unspecifiedCounterpartException (UnspecifiedCounterpartException exception) {
         return createHttpResponse(exception.getMessage());
     }
 
@@ -80,6 +80,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<HttpResponse> objectNotFoundException (ObjectNotFoundException exception) {
         return createHttpResponse(exception.getMessage());
     }
+
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<HttpResponse> accessDeniedException (AccessDeniedException exception) {
@@ -129,6 +130,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<HttpResponse> httpMessageNotReadableException (HttpMessageNotReadableException exception) {
+        LOGGER.error(exception.getMessage());
         String message = "Ocurríó un problema al intentar procesar alguno de los datos ingresados, por favor corríjalo e intentelo nuevamente.";
         String value = extractValueFromError(exception.getMostSpecificCause().getLocalizedMessage());
         if(!value.isEmpty()) message = "No se pudo procesar el valor: [" + value + "], por favor corríjalo y vuelva a intentarlo.";
@@ -137,6 +139,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<HttpResponse> methodArgumentTypeMismatchException (MethodArgumentTypeMismatchException exception) {
+        LOGGER.error(exception.getMessage());
         String message = "Ocurríó un problema al intentar procesar los datos ingresados por argumento en el recurso solicitado, por favor corríjalo e intentelo nuevamente. En caso persista contáctese con su proveedor";
         String value = extractValueFromError(exception.getMostSpecificCause().getLocalizedMessage());
         if(!value.isEmpty()) message = "No se pudo procesar el valor: [" + value + "], por favor corríjalo y vuelva a intentarlo. En caso persista contáctese con su proveedor";
@@ -145,10 +148,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<HttpResponse> internalServerError (Exception exception) {
-        return createHttpResponse(exception.getMessage());
+        LOGGER.error(exception.getMessage());
+        return createHttpResponse("Ocurrió un error al intentar procesar la operación.");
     }
 
     private ResponseEntity<HttpResponse> createHttpResponse(String message) {
+        LOGGER.error(message);
         return new ResponseEntity<>(new HttpResponse(HttpStatus.BAD_REQUEST.value(), HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.getReasonPhrase().toUpperCase(), message.toUpperCase()), HttpStatus.BAD_REQUEST);
     }
 

@@ -2,14 +2,10 @@ package com.disqueprogrammer.app.trackerfinance.service.impl.transactions;
 
 import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountEqualsException;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.InsuficientFundsException;
-import com.disqueprogrammer.app.trackerfinance.exception.domain.UnspecifiedMemberException;
+import com.disqueprogrammer.app.trackerfinance.exception.domain.UnspecifiedCounterpartException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
-import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.*;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.*;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.*;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction.ITransactionSaveService;
 import org.apache.commons.lang3.StringUtils;
@@ -18,7 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Transactional
 @Service
@@ -30,43 +32,38 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     private final TransactionRepository transactionRepository;
 
-    private final MemberRepository memberRepository;
+    private final CounterpartRepository counterpartRepository;
 
     private final PaymentMethodRepository paymentMethodRepository;
 
-    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
 
-    private final SegmentRepository segmentRepository;
+    private final RecurringRepository recurringRepository;
 
-    public TransactionSaveServiceImpl(AccountRepository accountRepository, TransactionRepository transactionRepository, MemberRepository memberRepository, PaymentMethodRepository paymentMethodRepository, CategoryRepository categoryRepository, SegmentRepository segmentRepository) {
+    public TransactionSaveServiceImpl(AccountRepository accountRepository, TransactionRepository transactionRepository, CounterpartRepository counterpartRepository, PaymentMethodRepository paymentMethodRepository, CategoryRepository categoryRepository, SubCategoryRepository subCategoryRepository, RecurringRepository recurringRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
-        this.memberRepository = memberRepository;
+        this.counterpartRepository = counterpartRepository;
         this.paymentMethodRepository = paymentMethodRepository;
-        this.categoryRepository = categoryRepository;
-        this.segmentRepository = segmentRepository;
+        this.subCategoryRepository = subCategoryRepository;
+        this.recurringRepository = recurringRepository;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Transaction save(Transaction transactionRequest) throws CustomException, InsuficientFundsException, ObjectNotFoundException, UnspecifiedMemberException, AccountEqualsException {
-        LOG.info("inicio transacción impl");
+    public Transaction save(Transaction transactionRequest) throws CustomException, AccountEqualsException, InsuficientFundsException, UnspecifiedCounterpartException {
 
-        //Setter params by default
-        transactionRequest = settingDefaultParameters(transactionRequest);
-
-        //Validation params
-        validateFormatAndCorrectValueAmount(transactionRequest.getAmount());
+        settingDefaultParameters(transactionRequest);
+        validationAmount(transactionRequest.getAmount());
         validCreateAt(transactionRequest.getCreateAt());
-        transactionRequest.setCategory(validateCategory(transactionRequest));
-        transactionRequest.setSegment(validateSegment(transactionRequest));
-        transactionRequest.setPaymentMethod(validatePaymentMethod(transactionRequest.getPaymentMethod(), transactionRequest.getType(), "origen", transactionRequest.getUserId()));
-        transactionRequest.setPaymentMethodDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validatePaymentMethod(transactionRequest.getPaymentMethodDestiny(), transactionRequest.getType(), "destino", transactionRequest.getUserId()));
+        transactionRequest.setSubCategory((validateCategory(transactionRequest)));
+        transactionRequest.setPaymentMethod(validatePaymentMethod(transactionRequest.getPaymentMethod(), transactionRequest.getType(), "origen", transactionRequest.getWorkspaceId()));
+        transactionRequest.setPaymentMethodDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validatePaymentMethod(transactionRequest.getPaymentMethodDestiny(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
         validateAccountBalanceAvailableForEnteredAmount(transactionRequest, transactionRequest.getPaymentMethod().getAccount());
 
         if (TypeEnum.LOAN.equals(transactionRequest.getType())) {
-            //Valid counterparty member
-            transactionRequest.setMember(validMemberForLoanTransaction(transactionRequest));
+            //Valid counterparty counterpart
+            transactionRequest.setCounterpart(validCounterpartForLoanTransaction(transactionRequest));
         }
 
         if (TypeEnum.PAYMENT.equals(transactionRequest.getType())) {
@@ -74,14 +71,14 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             Transaction transactionLoanAssocUpdated = updateLoanAssocFromPaymentToSave(transactionRequest);
             transactionRepository.save(transactionLoanAssocUpdated);
 
-            //Update Member to payment request
-            transactionRequest.setMember(transactionLoanAssocUpdated.getMember());
+            //Update Counterpart to payment request
+            transactionRequest.setCounterpart(transactionLoanAssocUpdated.getCounterpart());
         }
 
         if (!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())) {
             //proccessing balance account
             Long idAccount = transactionRequest.getPaymentMethod().getAccount().getId();
-            Account account = accountRepository.findByIdAndUserId(idAccount, transactionRequest.getUserId());
+            Account account = accountRepository.findByIdAndWorkspaceId(idAccount, transactionRequest.getWorkspaceId());
             account.setCurrentBalance(getNewBalance(transactionRequest, account));
 
             //update balance account
@@ -108,9 +105,13 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             accountRepository.save(accountDestiny);
         }
 
-        //register transactionRequest
-        return transactionRepository.save(transactionRequest);
+        // Case recurring
+        if(transactionRequest.getRecurring() != null) {
+            transactionRequest.getRecurring().setStatusIsPayed(true);
+            generateNextTransactionWithRecurring(transactionRequest);
+        }
 
+        return transactionRepository.save(transactionRequest);
     }
 
     private void validateAccountBalanceAvailableForEnteredAmount(Transaction transactionRequest, Account account) throws InsuficientFundsException {
@@ -129,65 +130,50 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
     }
 
-    private void validateFormatAndCorrectValueAmount(double amount) throws CustomException {
-        LOG.info("Amount: " + amount);
+    private void validationAmount(double amount) throws CustomException {
         Double.parseDouble(String.valueOf(amount));
-        LOG.info("Amount post parseDouble: " + amount);
         if (amount <= 0)  throw new CustomException("El monto de la operación debe ser mayor a cero.");
     }
 
-    private PaymentMethod validatePaymentMethod(PaymentMethod paymentMethodReq, TypeEnum typeOperation, String typePaymentMethod, Long userId) throws ObjectNotFoundException {
+    private PaymentMethod validatePaymentMethod(PaymentMethod paymentMethodReq, TypeEnum typeOperation, String typePaymentMethod, Long workspaceId) throws CustomException {
 
         String originOrDestiny = TypeEnum.TRANSFERENCE.equals(typeOperation)?typePaymentMethod:"";
 
         if(paymentMethodReq == null || StringUtils.isEmpty(paymentMethodReq.getId().toString())) {
-            throw new ObjectNotFoundException("El método de pago " + originOrDestiny + " no ha sido encontrado");
+            throw new CustomException("El método de pago " + originOrDestiny + " no ha sido encontrado");
         }
 
-        PaymentMethod paymentMethod = paymentMethodRepository.findByIdAndUserId(paymentMethodReq.getId(), userId);
+        PaymentMethod paymentMethod = paymentMethodRepository.findByIdAndWorkspaceId(paymentMethodReq.getId(), workspaceId);
         if(paymentMethod == null) {
-            throw new ObjectNotFoundException("El método de pago " + originOrDestiny  + " no ha sido encontrado");
+            throw new CustomException("El método de pago " + originOrDestiny  + " no ha sido encontrado");
         }
 
         return paymentMethod;
     }
 
-    private Category validateCategory(Transaction transactionRequest) throws ObjectNotFoundException {
+    private SubCategory validateCategory(Transaction transactionRequest) throws CustomException {
 
-        if(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getCategory() != null && transactionRequest.getCategory().getId() != null && transactionRequest.getCategory().getId() != 0 ) {
-            Category category = categoryRepository.findByIdAndUserId(transactionRequest.getCategory().getId(), transactionRequest.getUserId());
-            if(category == null) {
-                throw new ObjectNotFoundException("La categoría no ha sido encontrado");
+        if(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getSubCategory() != null && transactionRequest.getSubCategory().getId() != null && transactionRequest.getSubCategory().getId() != 0 ) {
+            SubCategory subCategory = subCategoryRepository.findByIdAndWorkspaceId(transactionRequest.getSubCategory().getId(), transactionRequest.getWorkspaceId());
+            if(subCategory == null) {
+                throw new CustomException("La categoría no ha sido encontrado");
             }
-            return category;
+            return subCategory;
         }
 
         return null;
     }
 
-    private Segment validateSegment(Transaction transactionRequest) throws ObjectNotFoundException {
-        if(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getSegment() != null && transactionRequest.getSegment().getId() != null && transactionRequest.getSegment().getId() != 0) {
-            Segment segment = segmentRepository.findByIdAndUserId(transactionRequest.getSegment().getId(), transactionRequest.getUserId());
-            if(segment == null ) {
-                throw new ObjectNotFoundException("El segmento no ha sido encontrado");
-            }
-            return segment;
-        }
-
-        return null;
-    }
-
-    private Transaction settingDefaultParameters(Transaction transactionRequest) throws CustomException {
+    private void settingDefaultParameters(Transaction transactionRequest) throws CustomException {
 
         if(transactionRequest.getType() == null) throw new CustomException("Por favor seleccione el tipo de operación para poder procesar la operación");
 
         if (transactionRequest.getType().equals(TypeEnum.TRANSFERENCE)) {
             transactionRequest.setBlock(BlockEnum.NOT_APPLICABLE);
-            transactionRequest.setAction(ActionEnum.REALICÉ);
+            transactionRequest.setAction(ActionEnum.NOT_APPLICABLE);
             transactionRequest.setRemaining(0);
-            transactionRequest.setMember(null);
-            transactionRequest.setCategory(null);
-            transactionRequest.setSegment(null);
+            transactionRequest.setCounterpart(null);
+            transactionRequest.setSubCategory(null);
         }
 
         if (TypeEnum.LOAN.equals(transactionRequest.getType())) {
@@ -204,7 +190,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         if (!TypeEnum.LOAN.equals(transactionRequest.getType())) {
             transactionRequest.setStatus(StatusEnum.NOT_APPLICABLE);
             transactionRequest.setRemaining(0);
-            transactionRequest.setMember(null);
+            transactionRequest.setCounterpart(null);
         }
 
         //Updating action tx
@@ -229,24 +215,23 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             transactionRequest.setBlock(BlockEnum.IN);
         }
 
-        return transactionRequest;
     }
 
-    private Member validMemberForLoanTransaction(Transaction transactionRequest) throws UnspecifiedMemberException {
+    private Counterpart validCounterpartForLoanTransaction(Transaction transactionRequest) throws UnspecifiedCounterpartException {
 
         String message = transactionRequest.getAction().equals(ActionEnum.RECIBÍ)?" de quien se recibió ": "a quien se otorgó ";
-        if (transactionRequest.getMember() == null ) throw new UnspecifiedMemberException("Ocurrió un error al intentar detectar a la persona " + message + "el préstamo.");
-        Member counterParty =  memberRepository.findByIdAndUserId(transactionRequest.getMember().getId(), transactionRequest.getUserId());
-        if(counterParty == null) throw new UnspecifiedMemberException("Ocurrió un error al intentar detectar a la persona " + message + "el préstamo.");
+        if (transactionRequest.getCounterpart() == null ) throw new UnspecifiedCounterpartException("Ocurrió un error al intentar detectar a la persona " + message + "el préstamo.");
+        Counterpart counterParty =  counterpartRepository.findByIdAndWorkspaceId(transactionRequest.getCounterpart().getId(), transactionRequest.getWorkspaceId());
+        if(counterParty == null) throw new UnspecifiedCounterpartException("Ocurrió un error al intentar detectar a la persona " + message + "el préstamo.");
         return counterParty;
     }
 
-    private Transaction updateLoanAssocFromPaymentToSave(Transaction transactionRequest) throws ObjectNotFoundException, CustomException {
+    private Transaction updateLoanAssocFromPaymentToSave(Transaction transactionRequest) throws CustomException {
 
             Long idTransactionLoanAssoc = transactionRequest.getIdLoanAssoc();
-            if (idTransactionLoanAssoc == null) throw new ObjectNotFoundException("El préstamo al que hace referencia el pago registrado no existe.");
-            Transaction transactionLoanAssoc = transactionRepository.findByIdAndUserId(idTransactionLoanAssoc, transactionRequest.getUserId());
-            if(transactionLoanAssoc == null) new ObjectNotFoundException("El préstamo al que hace referencia el pago registrado no existe.");
+            if (idTransactionLoanAssoc == null) throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
+            Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
+            if(transactionLoanAssoc == null) new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
 
             if(!transactionLoanAssoc.getType().equals(TypeEnum.LOAN)) {
                 throw new CustomException("La transacción seleccionada como préstamo no es correcto, seleccione otro.");
@@ -293,7 +278,200 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
 
         return newBalance;
+    }   
+
+    @Override
+    public void saveNewTransactionRecurring(Transaction nextTransactionRecurring) throws Exception {
+        try {
+            Recurring recurring = nextTransactionRecurring.getRecurring();
+            saveNewTransactionRecurringByDateCreatedTx(nextTransactionRecurring, recurring, LocalDateTime.now());
+        } catch (Exception error) {
+            LOG.error(error.getLocalizedMessage());
+            throw new Exception("Ocurrió un error al procesar la operación a registrar.");
+        }
+
     }
 
+    private void saveNewTransactionRecurringByDateCreatedTx(Transaction nextTransactionRecurring, Recurring recurring, LocalDateTime localDateTimeReq) {
+        for (int selectedCalendar : recurring.getItemDateSelectedPerPeriod()) {
+
+            Recurring newRecurring = new Recurring();
+
+            if (recurring.getPeriod().equals(PeriodEnum.DAY)) {
+                newRecurring.setItemDateSelectedPerPeriod(getItemSelectedPerPeriod(selectedCalendar));
+                newRecurring.setNextPaymentDate(localDateTimeReq.plusDays(recurring.getNumberOfTimes()));
+                newRecurring.setNextClosestPaymentDate(recurring.getNextPaymentDate());
+            }
+
+            if (recurring.getPeriod().equals(PeriodEnum.WEEK)) {
+                //Lunes = 1, Martes = 2, ..., Domingo = 7
+                int dayWeekByActualDate = localDateTimeReq.getDayOfWeek().getValue();
+                int daysRemainingUntilTheWeekDayRequired = 0;
+                if (dayWeekByActualDate <= (selectedCalendar + 1)) {
+                    daysRemainingUntilTheWeekDayRequired = (selectedCalendar + 1) - dayWeekByActualDate;
+                } else {
+                    daysRemainingUntilTheWeekDayRequired = (7 - dayWeekByActualDate) + (selectedCalendar + 1);
+                }
+
+                newRecurring.setItemDateSelectedPerPeriod(getItemSelectedPerPeriod(selectedCalendar));
+                newRecurring.setNextClosestPaymentDate(localDateTimeReq.plusDays(daysRemainingUntilTheWeekDayRequired));
+                newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusDays(newRecurring.getNumberOfTimes() * 7L));
+            }
+
+            if (recurring.getPeriod().equals(PeriodEnum.MONTH)) {
+                int daysRemainingUntilTheDayRequired = 0;
+
+                if (localDateTimeReq.getDayOfMonth() <= (selectedCalendar)) {
+
+                    if ((selectedCalendar == 31 || selectedCalendar == 30) && localDateTimeReq.toLocalDate().lengthOfMonth() < selectedCalendar) {
+                        daysRemainingUntilTheDayRequired = localDateTimeReq.toLocalDate().lengthOfMonth() - localDateTimeReq.getDayOfMonth();
+                    } else {
+                        daysRemainingUntilTheDayRequired = (selectedCalendar) - localDateTimeReq.getDayOfMonth();
+                    }
+
+                } else {
+                    //Get final day of actual month
+                    daysRemainingUntilTheDayRequired = (localDateTimeReq.toLocalDate().lengthOfMonth() - localDateTimeReq.getDayOfMonth()) + (selectedCalendar + 1);
+                }
+
+                newRecurring.setItemDateSelectedPerPeriod(getItemSelectedPerPeriod(selectedCalendar));
+                newRecurring.setNextClosestPaymentDate(localDateTimeReq.plusDays(daysRemainingUntilTheDayRequired));
+                newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusMonths(recurring.getNumberOfTimes()));
+            }
+
+            if (recurring.getPeriod().equals(PeriodEnum.YEAR)) {
+                int daysRemainingUntilTheDayMonthRequired = 0;
+
+                int anio = localDateTimeReq.getYear();
+                LocalDateTime dateSelected = getDateTimeCreatedNewRecurringByPeriodYear(selectedCalendar, recurring, anio);
+
+                if (localDateTimeReq.isBefore(dateSelected)) {
+                    daysRemainingUntilTheDayMonthRequired = (int) ChronoUnit.DAYS.between(dateSelected, localDateTimeReq);
+                } else {
+                    daysRemainingUntilTheDayMonthRequired = (int) ChronoUnit.DAYS.between(dateSelected.plusYears(1), localDateTimeReq);
+                }
+
+                newRecurring.setItemDateSelectedPerPeriod(getItemSelectedPerPeriod(selectedCalendar));
+                newRecurring.setNextClosestPaymentDate(localDateTimeReq.plusDays(daysRemainingUntilTheDayMonthRequired));
+                newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusYears(recurring.getNumberOfTimes()));
+            }
+
+            newRecurring.setNumberOfTimes(recurring.getNumberOfTimes());
+            newRecurring.setCode(String.valueOf(UUID.randomUUID()));
+            newRecurring.setStatusIsPayed(false);
+            newRecurring.setPeriod(recurring.getPeriod());
+            transactionRepository.save(setterNewTransaction(nextTransactionRecurring, this.recurringRepository.save(newRecurring)));
+
+        }
+    }
+
+    private static LocalDateTime getDateTimeCreatedNewRecurringByPeriodYear(int selectedCalendar, Recurring recurring, int anio) {
+        int mes = selectedCalendar + 1;
+        int dia = recurring.getDayMonth(); // Only YEAR period;
+
+        //Only the month has fewer days than the selected day.
+        if ((dia == 31 || dia == 30) && LocalDate.of(anio, mes, 1).lengthOfMonth() < dia) {
+            dia = LocalDate.of(anio, mes, 1).lengthOfMonth();
+        }
+
+        LocalDate fecha = LocalDate.of(anio, mes, dia);
+        LocalTime hora = LocalTime.of(12, 0); // Ejemplo: 12:00
+        return LocalDateTime.of(fecha, hora);
+    }
+
+    private static List<Integer> getItemSelectedPerPeriod(int selectedCalendar) {
+        List<Integer> itemDateSelectedPerPeriod = new ArrayList<>();
+        itemDateSelectedPerPeriod.add(selectedCalendar);
+        return itemDateSelectedPerPeriod;
+    }
+
+    private Transaction setterNewTransaction(Transaction transactionReq, Recurring recurring) {
+        Transaction nextTransactionRecurring = new Transaction();
+        nextTransactionRecurring.setId(transactionReq.getId());
+        nextTransactionRecurring.setRecurring(recurring);
+        nextTransactionRecurring.setAmount(transactionReq.getAmount());
+        nextTransactionRecurring.setAction(transactionReq.getAction());
+        nextTransactionRecurring.setBlock(transactionReq.getBlock());
+        nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());
+        nextTransactionRecurring.setDescription(transactionReq.getDescription());
+        nextTransactionRecurring.setTags(transactionReq.getTags());
+        nextTransactionRecurring.setType(transactionReq.getType());
+        nextTransactionRecurring.setSubCategory(transactionReq.getSubCategory());
+        nextTransactionRecurring.setStatus(transactionReq.getStatus());
+        nextTransactionRecurring.setCreateAt(transactionReq.getCreateAt());
+        nextTransactionRecurring.setIdLoanAssoc(transactionReq.getIdLoanAssoc());
+        nextTransactionRecurring.setPaymentMethod(transactionReq.getPaymentMethod());
+        nextTransactionRecurring.setPaymentMethodDestiny(transactionReq.getPaymentMethodDestiny());
+        nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());
+        nextTransactionRecurring.setUserId(transactionReq.getUserId());
+        nextTransactionRecurring.setWorkspaceId(transactionReq.getWorkspaceId());
+        return nextTransactionRecurring;
+    }
+
+    private void generateNextTransactionWithRecurring(Transaction transactionRequest) {
+        // Duplicated tx with next Payment date
+        Recurring newRecurring = new Recurring();
+        newRecurring.setCode(transactionRequest.getRecurring().getCode());
+        newRecurring.setPeriod(transactionRequest.getRecurring().getPeriod());
+        newRecurring.setDayMonth(transactionRequest.getRecurring().getDayMonth());
+        newRecurring.setItemDateSelectedPerPeriod(transactionRequest.getRecurring().getItemDateSelectedPerPeriod());
+        newRecurring.setStatusIsPayed(false);
+        newRecurring.setNumberOfTimes(transactionRequest.getRecurring().getNumberOfTimes());
+        newRecurring.setNextClosestPaymentDate(transactionRequest.getRecurring().getNextPaymentDate());
+
+        if(transactionRequest.getRecurring().getPeriod().equals(PeriodEnum.DAY)) {
+            newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusDays(newRecurring.getNumberOfTimes()));
+        }
+
+        if(transactionRequest.getRecurring().getPeriod().equals(PeriodEnum.WEEK)) {
+            newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusDays(newRecurring.getNumberOfTimes()* 7L));
+        }
+
+        int numberOfTimes = transactionRequest.getRecurring().getNumberOfTimes();
+
+        if(transactionRequest.getRecurring().getPeriod().equals(PeriodEnum.MONTH)) {
+            int dayMonthSelected = transactionRequest.getRecurring().getItemDateSelectedPerPeriod().get(0);
+            int lengthOfMonth = newRecurring.getNextClosestPaymentDate().plusMonths(numberOfTimes).toLocalDate().lengthOfMonth();
+            int yearPerPeriodMonth = newRecurring.getNextClosestPaymentDate().plusMonths(numberOfTimes).getYear();
+            int monthPerPeriodMonth = newRecurring.getNextClosestPaymentDate().plusMonths(numberOfTimes).getMonthValue();
+
+            if((dayMonthSelected == 30 || dayMonthSelected == 31)
+                    &&  lengthOfMonth <  dayMonthSelected){
+
+                LocalDate newNextPaymentDate = LocalDate.of(yearPerPeriodMonth, monthPerPeriodMonth, lengthOfMonth);
+                LocalTime hour = LocalTime.of(12, 0);
+                LocalDateTime dateSelected = LocalDateTime.of(newNextPaymentDate, hour);
+
+                newRecurring.setNextPaymentDate(dateSelected);
+            } else {
+                newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusMonths(numberOfTimes));
+            }
+        }
+
+        if(transactionRequest.getRecurring().getPeriod().equals(PeriodEnum.YEAR)) {
+            int lengthOfMonthPerYear = newRecurring.getNextClosestPaymentDate().plusYears(numberOfTimes).toLocalDate().lengthOfMonth();
+
+            if((transactionRequest.getRecurring().getDayMonth() == 30 || transactionRequest.getRecurring().getDayMonth() == 31)
+                    &&  lengthOfMonthPerYear <  transactionRequest.getRecurring().getDayMonth()){
+
+                LocalDateTime dateSelected = getDateTimeRegenerationRecurringPerPeriodYear(transactionRequest, newRecurring, numberOfTimes);
+
+                newRecurring.setNextPaymentDate(dateSelected);
+            } else {
+                newRecurring.setNextPaymentDate(newRecurring.getNextClosestPaymentDate().plusYears(numberOfTimes));
+            }
+        }
+
+        transactionRepository.save(setterNewTransaction(transactionRequest, this.recurringRepository.save(newRecurring)));
+    }
+
+    private static LocalDateTime getDateTimeRegenerationRecurringPerPeriodYear(Transaction transactionRequest, Recurring newRecurring, int numberOfTimes) {
+        int lengthOfMonth = newRecurring.getNextClosestPaymentDate().plusYears(numberOfTimes).toLocalDate().lengthOfMonth();
+        int yearPerPeriodYear = newRecurring.getNextClosestPaymentDate().plusYears(numberOfTimes).getYear();
+        int monthPerPeriodYear = transactionRequest.getRecurring().getItemDateSelectedPerPeriod().get(0);
+        LocalDate newNextPaymentDate = LocalDate.of(yearPerPeriodYear, monthPerPeriodYear, lengthOfMonth);
+        LocalTime hour = LocalTime.of(12, 0);
+        return LocalDateTime.of(newNextPaymentDate, hour);
+    }
 
 }

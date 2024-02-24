@@ -11,10 +11,10 @@ import java.util.List;
 public interface IPaymentMethodService {
     PaymentMethod save(PaymentMethod paymentMethod) throws ObjectExistsException, AccountNotFoundException;
 
-    PaymentMethod findByIdAndUserId(Long paymentMethodId, Long userId) throws ObjectNotFoundException;
-    List<PaymentMethod> findByUserId(Long userId);
+    PaymentMethod findByIdAndWorkspaceId(Long paymentMethodId, Long workspaceId) throws ObjectNotFoundException;
+    List<PaymentMethod> findByWorkspaceId(Long workspaceId);
 
     PaymentMethod update(PaymentMethod paymentMethod, Long idPaymentMethod) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException;
 
-    void delete(Long paymentMethodId, Long userId) throws ObjectNotFoundException, CustomException;
+    void delete(Long paymentMethodId, Long workspaceId) throws ObjectNotFoundException, CustomException;
 }

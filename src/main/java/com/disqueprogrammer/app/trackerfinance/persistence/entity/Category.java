@@ -1,9 +1,6 @@
 package com.disqueprogrammer.app.trackerfinance.persistence.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -21,9 +18,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "El campo nombre no puede ser nulo")
-    @NotEmpty(message = "El campo nombre no puede ser vacío")
     private String name;
 
-    private Long userId;
+    private Long workspaceId;
 }

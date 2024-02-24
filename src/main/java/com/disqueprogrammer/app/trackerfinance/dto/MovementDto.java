@@ -1,8 +1,4 @@
 package com.disqueprogrammer.app.trackerfinance.dto;
-
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.Category;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.PaymentMethod;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.Segment;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
 import lombok.*;

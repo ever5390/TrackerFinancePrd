@@ -5,14 +5,14 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnu
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @AllArgsConstructor
 @Getter
@@ -25,8 +25,6 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "El campo monto no puede ser nulo")
-    @NotEmpty(message = "El campo monto no puede ser vacío")
     private double amount;
 
     private String description;
@@ -37,23 +35,15 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private TypeEnum type;
 
-    @NotNull(message = "El campo medio de pago origen no puede ser nulo")
-    @NotEmpty(message = "El campo medio de pago origen no puede ser vacío")
     @ManyToOne
     private PaymentMethod paymentMethod;
 
-    @NotNull(message = "El campo medio de pago destino no puede ser nulo")
-    @NotEmpty(message = "El campo medio de pago destino no puede ser vacío")
     @ManyToOne
     private PaymentMethod paymentMethodDestiny;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
-    private Category category;
-
-    @ManyToOne
-    @JoinColumn(name = "segment_id")
-    private Segment segment;
+    @JoinColumn(name = "subCategory_id")
+    private SubCategory subCategory;
 
     @Enumerated(EnumType.STRING)
     private ActionEnum action;
@@ -66,12 +56,21 @@ public class Transaction {
 
     private double remaining;
 
+    @ManyToMany
+    @JoinTable(name = "tag_transaction", joinColumns = @JoinColumn(name = "fk_transaction"), inverseJoinColumns = @JoinColumn(name = "fk_tag"))
+    private List<Tag> tags;
+
     @ManyToOne
-    @JoinColumn(name = "member_id", nullable = true)
-    private Member member;
+    @JoinColumn(name = "counterpart_id", nullable = true)
+    private Counterpart counterpart;
+
+    @OneToOne
+    private Recurring recurring;
 
     private Long idLoanAssoc;
 
     private Long userId;
+
+    private Long workspaceId;
 
 }

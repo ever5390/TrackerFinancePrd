@@ -8,10 +8,10 @@ import java.util.List;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
-    Account findByNameAndUserId(String name, Long userId);
+    Account findByNameAndWorkspaceId(String name, Long workspaceId);
 
-    Account findByIdAndUserId(Long accountId, Long userId);
+    Account findByIdAndWorkspaceId(Long accountId, Long workspaceId);
 
-    List<Account> findByUserId(Long userId);
+    List<Account> findByWorkspaceId(Long workspaceId);
 
 }

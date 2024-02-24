@@ -21,12 +21,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JwtAuthenticationEntryPoint.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtAccessDeniedHandler.class);
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
 
         LOGGER.info(":::::: FilterAccesDenied Begin ::::::::");
+        LOGGER.info("USER: " + request.toString());
         LOGGER.info(accessDeniedException.getLocalizedMessage());
         LOGGER.info(":::::: FilterAccesDenied End ::::::::");
 

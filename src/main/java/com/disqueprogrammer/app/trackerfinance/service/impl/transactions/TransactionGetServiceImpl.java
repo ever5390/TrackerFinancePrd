@@ -2,6 +2,7 @@ package com.disqueprogrammer.app.trackerfinance.service.impl.transactions;
 
 import com.disqueprogrammer.app.trackerfinance.dto.MovementDto;
 import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
+import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
@@ -32,20 +33,20 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
     }
 
     @Override
-    public Transaction findByIdAndUserId(Long transactionRequestId, Long userId) throws ObjectNotFoundException {
+    public Transaction findByIdAndWorkspaceId(Long transactionRequestId, Long workspaceId) throws CustomException {
 
-        Transaction transaction = transactionRepository.findByIdAndUserId(transactionRequestId, userId);
-        if (transaction == null)  throw new ObjectNotFoundException("No se encontró la transacción seleccionada");
+        Transaction transaction = transactionRepository.findByIdAndWorkspaceId(transactionRequestId, workspaceId);
+        if (transaction == null)  throw new CustomException("No se encontró la transacción seleccionada");
         return transaction;
     }
 
-    public ResumeMovementDto findByUserId(Long userId) throws Exception {
+    public ResumeMovementDto findByWorkspaceId(Long workspaceId) throws Exception {
 
         ResumeMovementDto resumeMovementDto = new ResumeMovementDto();
 
         List<MovementDto> movementsDto = new ArrayList<>();
 
-        List<Transaction> transactions = transactionRepository.findByUserId(userId);
+        List<Transaction> transactions = transactionRepository.findByWorkspaceId(workspaceId);
 
         double totalIN = 0.0;
         double totalOUT = 0.0;
@@ -80,8 +81,8 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
                 if(transactions.get(i).getType().equals(TypeEnum.LOAN)) descriptionToShow+="PRÉSTAMO";
                 if(transactions.get(i).getType().equals(TypeEnum.PAYMENT)) descriptionToShow+="PAGO";
 
-                if(transactions.get(i).getAction().equals(ActionEnum.RECIBÍ)) descriptionToShow+=" de " + transactions.get(i).getMember().getName();
-                if(transactions.get(i).getAction().equals(ActionEnum.REALICÉ)) descriptionToShow+=" a " + transactions.get(i).getMember().getName();
+                if(transactions.get(i).getAction().equals(ActionEnum.RECIBÍ)) descriptionToShow+=" de " + transactions.get(i).getCounterpart().getName();
+                if(transactions.get(i).getAction().equals(ActionEnum.REALICÉ)) descriptionToShow+=" a " + transactions.get(i).getCounterpart().getName();
             }
 
             if(transactions.get(i).getType().equals(TypeEnum.TRANSFERENCE)) {
@@ -118,13 +119,13 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
     }
 
     @Override
-    public List<Transaction> findByTypeAndStatusAndUserId(TypeEnum type, StatusEnum status, Long userId) {
-        return this.transactionRepository.findByTypeAndStatusAndUserId(type, status, userId);
+    public List<Transaction> findByTypeAndStatusAndWorkspaceId(TypeEnum type, StatusEnum status, Long workspaceId) {
+        return this.transactionRepository.findByTypeAndStatusAndWorkspaceId(type, status, workspaceId);
     }
 
     @Override
-    public List<Transaction> findAllTxByUserId(Long userId) {
-        return this.transactionRepository.findByUserId(userId);
+    public List<Transaction> findAllTxByWorkspaceId(Long workspaceId) {
+        return this.transactionRepository.findByWorkspaceId(workspaceId);
     }
 
 

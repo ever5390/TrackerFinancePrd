@@ -11,16 +11,17 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-@NoArgsConstructor
 @Entity
-public class Segment {
+public class SubCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "El campo nombre no puede ser nulo")
-    @NotEmpty(message = "El campo nombre no puede ser vacío")
     private String name;
 
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    private Long workspaceId;
 }

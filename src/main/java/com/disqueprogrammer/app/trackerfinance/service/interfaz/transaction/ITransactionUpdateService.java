@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface ITransactionUpdateService {
 
-    Transaction update(Transaction transaction, Long idTransaction) throws ObjectNotFoundException, InsuficientFundsException, CustomException;
+    Transaction update(Transaction transaction, Long idTransaction) throws InsuficientFundsException, CustomException;
 
+    Transaction updateTransactionRecurring(Transaction nextTransactionRecurring, Long transactionRecurringId) throws Exception;
 }

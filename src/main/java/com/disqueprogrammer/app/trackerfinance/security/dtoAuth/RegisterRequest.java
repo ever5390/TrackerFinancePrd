@@ -15,6 +15,7 @@ public class RegisterRequest {
     private String lastname;
     private String country;
     private String role;
+    private Long userParentId;
     private boolean isActive;
     private boolean isNonLocked;
 }

@@ -1,6 +1,7 @@
 package com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction;
 
 import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
+import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
@@ -11,11 +12,11 @@ import java.util.List;
 
 public interface ITransactionGetService {
 
-    Transaction findByIdAndUserId(Long transactionId, Long userId) throws ObjectNotFoundException;
+    Transaction findByIdAndWorkspaceId(Long transactionId, Long workspaceId) throws CustomException;
 
-    public ResumeMovementDto findByUserId(Long userId) throws Exception;
+    public ResumeMovementDto findByWorkspaceId(Long workspaceId) throws Exception;
 
-    List<Transaction> findByTypeAndStatusAndUserId(TypeEnum type, StatusEnum status, Long userId);
+    List<Transaction> findByTypeAndStatusAndWorkspaceId(TypeEnum type, StatusEnum status, Long workspaceId);
 
-    List<Transaction> findAllTxByUserId(Long userId);
+    List<Transaction> findAllTxByWorkspaceId(Long workspaceId);
 }

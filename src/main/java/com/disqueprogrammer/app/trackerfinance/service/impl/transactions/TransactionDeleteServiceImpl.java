@@ -32,11 +32,11 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
     }
 
     @Override
-    public void delete(Long transactionRequestId, Long userId) throws CustomException, ObjectNotFoundException, InsuficientFundsException {
+    public void delete(Long transactionRequestId, Long workspaceId) throws CustomException, InsuficientFundsException {
 
         //Exist Tx
-        Transaction transactionFounded = transactionRepository.findByIdAndUserId(transactionRequestId, userId);
-        if (transactionFounded == null) throw new ObjectNotFoundException("No se encontró la transacción seleccionada");
+        Transaction transactionFounded = transactionRepository.findByIdAndWorkspaceId(transactionRequestId, workspaceId);
+        if (transactionFounded == null) throw new CustomException("No se encontró la transacción seleccionada");
 
         if (!TypeEnum.TRANSFERENCE.equals(transactionFounded.getType())) {
             reverseAndUpDateBalanceAvailableAccountByDeleteTx(transactionFounded);
@@ -48,7 +48,7 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
 
         if (TypeEnum.LOAN.equals(transactionFounded.getType())) {
             //Searching for transactions Payment type associated with this operation
-            List<Transaction> paymentTransaction = transactionRepository.findPaymentsByLoanIdAssocAndUserId(transactionRequestId, transactionFounded.getUserId());
+            List<Transaction> paymentTransaction = transactionRepository.findPaymentsByLoanIdAssocAndWorkspaceId(transactionRequestId, transactionFounded.getWorkspaceId());
             if(!paymentTransaction.isEmpty())  throw new CustomException("No es posible eliminar la transacción de tipo PRÉSTAMO ya que se encontraron pagos asociados a ella.");
         }
 
@@ -99,7 +99,7 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
 
     private Transaction updateLoanAssocReverseByDeleteTx(Transaction transactionRequest) {
         Long idTransactionLoanAssoc = transactionRequest.getIdLoanAssoc();
-        Transaction transactionLoanAssoc = transactionRepository.findByIdAndUserId(idTransactionLoanAssoc, transactionRequest.getUserId());
+        Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
         double currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
         double newRemainingLoanAssoc = currentRemainingLoanAssoc + transactionRequest.getAmount();
 

@@ -10,10 +10,10 @@ public interface ICategoryService {
 
     Category save(Category category) throws CategoryExistsException;
 
-    Category findByIdAndUserId(Long categoryId, Long userId) throws CategoryNotFoundException;
-    List<Category> findByUserId(Long userId);
+    Category findByIdAndWorkspaceId(Long categoryId, Long workspaceId) throws CategoryNotFoundException;
+    List<Category> findByWorkspaceId(Long workspaceId);
 
     Category update(Category category, Long idAccount) throws CategoryExistsException, CategoryNotFoundException;
 
-    void delete(Long categoryId, Long userId) throws CategoryNotFoundException;
+    void delete(Long categoryId, Long workspaceId) throws CategoryNotFoundException;
 }
