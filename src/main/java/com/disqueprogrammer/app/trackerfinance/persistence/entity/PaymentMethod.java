@@ -21,6 +21,8 @@ public class PaymentMethod {
 
     private String name;
 
+    private boolean active;
+
     @ManyToOne
     private Account account;
 }

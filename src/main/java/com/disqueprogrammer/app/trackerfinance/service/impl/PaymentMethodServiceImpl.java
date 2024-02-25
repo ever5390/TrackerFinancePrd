@@ -30,7 +30,7 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
         validateDuplicatedName(paymentMethodRequest);
         validateAccountAssoc(paymentMethodRequest);
         paymentMethodRequest.setName(paymentMethodRequest.getName().toUpperCase());
-
+        paymentMethodRequest.setActive(true);
         return paymentMethodRepository.save(paymentMethodRequest);
     }
 

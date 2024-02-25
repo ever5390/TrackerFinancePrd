@@ -46,15 +46,14 @@ public class AuthController extends ExceptionHandling {
         return new ResponseEntity<>(userService.registerUserSuperAdmin(request), HttpStatus.CREATED);
     }
 
-    //@PreAuthorize("hasAuthority('user:create')")
-    @PreAuthorize("isAuthenticated() and hasAuthority('user:create')")
+    @PreAuthorize("isAuthenticated() and hasRole('ROLE_SUPER_ADMIN')")
     @PostMapping("/users/{userParentId}/newUser")
     public ResponseEntity<HttpResponse> registerNewUser(@PathVariable("userParentId") Long userParentId, @RequestBody RegisterRequest request) throws UserNameExistsException, EmailExistsException, CustomException {
         return new ResponseEntity<>(userService.registerNewUser(userParentId, request), HttpStatus.CREATED);
     }
 
     //@PreAuthorize("isAuthenticated() and hasAuthority('user:create')")
-    @PreAuthorize("isAuthenticated() and hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated() and hasRole('ROLE_SUPER_ADMIN')")
     @GetMapping("/users/{userParentId}")
     public List<User> findByUserParent(@PathVariable("userParentId") Long userParentId) throws UserNotFoundException {
         return this.userService.findByUserParent(userParentId);

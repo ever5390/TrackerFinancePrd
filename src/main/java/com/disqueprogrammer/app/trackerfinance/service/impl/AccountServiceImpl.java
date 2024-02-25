@@ -34,6 +34,7 @@ public class AccountServiceImpl implements IAccountService {
     public Account save(Account accountRequest) throws NotAllowedAccountBalanceException, AccountNotFoundException, AccountExistsException, NotNumericException, CustomException {
         validateBalance(accountRequest);
         validateDuplicatedName(accountRequest);
+        accountRequest.setActive(true);
         return accountRepository.save(accountRequest);
     }
 

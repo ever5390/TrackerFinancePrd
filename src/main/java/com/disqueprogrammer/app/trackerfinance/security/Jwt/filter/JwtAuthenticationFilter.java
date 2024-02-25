@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.disqueprogrammer.app.trackerfinance.security.Jwt.JwtService;
 import com.disqueprogrammer.app.trackerfinance.security.dtoAuth.HttpResponse;
 import io.jsonwebtoken.ExpiredJwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,13 +26,14 @@ import java.io.OutputStream;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
-
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	//OncePerRequestFilter :: Procesa una petición por vez
-	private final JwtService jwtService;
-	private final UserDetailsService userDetailsService;
+
+	Logger LOGGER = LoggerFactory.getLogger(getClass());
+	private JwtService jwtService;
+	private UserDetailsService userDetailsService;
 
 	public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
 		this.jwtService = jwtService;
@@ -57,12 +60,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 			//3. Obtener el subject(username) desde el jwt
 			username=jwtService.getUsernameFromToken(token);
-
+			System.out.println(" ::::: username: " + username);
 			//4. valida que el context Holder tenga seteada la authenticación
 			if (username!=null && SecurityContextHolder.getContext().getAuthentication()==null)
 			{
 				UserDetails userDetails=userDetailsService.loadUserByUsername(username);
 
+				System.out.println(":::: userDateails: " + userDetails.getAuthorities());
 				if (jwtService.isTokenValid(token, userDetails))
 				{
 					// El null en las credenciales, aquí las credenciales solo son necesarias cuando mandamos a llamar el método

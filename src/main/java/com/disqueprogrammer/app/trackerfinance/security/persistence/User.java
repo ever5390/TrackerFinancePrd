@@ -1,25 +1,17 @@
 package com.disqueprogrammer.app.trackerfinance.security.persistence;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.stream.Collectors;
-
-import static java.util.Arrays.stream;
 
 @Getter
 @Setter
 @Entity
 @Table(name="user", uniqueConstraints = {@UniqueConstraint(columnNames = {"username", "email"})})
-public class User implements UserDetails {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,13 +35,13 @@ public class User implements UserDetails {
 
     private String role;
 
+    private String[] authorities;
+
     private LocalDateTime lastLoginDate;
 
     private LocalDateTime lastLoginDateDisplay;
 
     private LocalDateTime joinDate;
-
-    private String[] authorities;
 
     private boolean isActive;
 
@@ -68,43 +60,5 @@ public class User implements UserDetails {
     private User userParent;
 
     public User() {}
-
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return stream(authorities).map(SimpleGrantedAuthority::new).collect(Collectors.toList());
-    }
-
-    @Override
-    public String getPassword() {
-        return this.password;
-    }
-
-    @Override
-    public String getUsername() {
-        return this.username;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return this.isNotLocked;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return this.isActive;
-    }
-
-
 
 }

@@ -27,8 +27,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
 
         LOGGER.info(":::::: FilterAccesDenied Begin ::::::::");
-        LOGGER.info("USER: " + request.toString());
-        LOGGER.info(accessDeniedException.getLocalizedMessage());
+        LOGGER.info(" ::::::getUserPrincipal::::::: " + request.getUserPrincipal() + " ::::::::::::: ");
         LOGGER.info(":::::: FilterAccesDenied End ::::::::");
 
         HttpResponse httpResponse = new HttpResponse(UNAUTHORIZED.value(), UNAUTHORIZED, "ACCES DENIED: " + UNAUTHORIZED.getReasonPhrase().toUpperCase(), ACCESS_DENIED_MESSAGE);

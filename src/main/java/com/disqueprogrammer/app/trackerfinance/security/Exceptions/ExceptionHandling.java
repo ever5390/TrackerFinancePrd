@@ -1,6 +1,5 @@
 package com.disqueprogrammer.app.trackerfinance.security.Exceptions;
 
-import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.EmailExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameExistsException;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNameNotFoundException;
@@ -10,15 +9,17 @@ import io.jsonwebtoken.ExpiredJwtException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.servlet.error.ErrorController;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.Objects;
 
@@ -55,9 +56,32 @@ public class ExceptionHandling implements ErrorController {
         return createHttpResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<HttpResponse> accessDeniedException (AccessDeniedException exception) {
+        LOGGER.error("::: exception.getLocalizedMessage() ::::: " + exception.getLocalizedMessage());
+
+        return createHttpResponse(HttpStatus.BAD_REQUEST, "Acceso denegado, no cuentas con los permisos para realizar esta operación.");
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<HttpResponse> accountDisabledException() {
+        return createHttpResponse(BAD_REQUEST, "Su usuario fue deshabilitado,comuniquese con su administrador.");
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<HttpResponse> lockedException() {
+        return createHttpResponse(UNAUTHORIZED, "Su usuario fue bloqueado, comníquese con su administrador.");
+    }
+
+
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<HttpResponse> tokenExpiredException(ExpiredJwtException exception) {
         return createHttpResponse(UNAUTHORIZED, exception.getMessage());
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<HttpResponse> noHandlerFoundException(NoHandlerFoundException e) {
+        return createHttpResponse(BAD_REQUEST, "There is no mapping for this URL");
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

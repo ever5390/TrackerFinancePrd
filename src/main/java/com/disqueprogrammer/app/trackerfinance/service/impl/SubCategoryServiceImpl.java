@@ -19,18 +19,18 @@ public class SubCategoryServiceImpl implements ISubCategoryService {
     private final TransactionRepository transactionRepository;
 
     @Override
-    public SubCategory save(SubCategory segmentRequest) throws CustomException {
+    public SubCategory save(SubCategory subCategoryRequest) throws CustomException {
 
-        validateDuplicatedName(segmentRequest);
+        validateDuplicatedName(subCategoryRequest);
 
-        SubCategory segmentNameRepeated = subCategoryRepository.findByNameAndWorkspaceId(segmentRequest.getName().toUpperCase(), segmentRequest.getWorkspaceId());
+        SubCategory segmentNameRepeated = subCategoryRepository.findByNameAndWorkspaceId(subCategoryRequest.getName().toUpperCase(), subCategoryRequest.getWorkspaceId());
         if(segmentNameRepeated != null) {
             throw new CustomException("Ya existe un segmento con el nombre que intentas registrar");
         }
+        subCategoryRequest.setActive(true);
+        subCategoryRequest.setName(subCategoryRequest.getName().toUpperCase());
 
-        segmentRequest.setName(segmentRequest.getName().toUpperCase());
-
-        return subCategoryRepository.save(segmentRequest);
+        return subCategoryRepository.save(subCategoryRequest);
     }
 
     @Override
@@ -49,18 +49,18 @@ public class SubCategoryServiceImpl implements ISubCategoryService {
     }
 
     @Override
-    public SubCategory update(SubCategory segmentRequest, Long idSubCategory) throws CustomException {
+    public SubCategory update(SubCategory subCategoryRequest, Long idSubCategory) throws CustomException {
 
-        SubCategory segmentFounded = subCategoryRepository.findByIdAndWorkspaceId(idSubCategory, segmentRequest.getWorkspaceId());
+        SubCategory segmentFounded = subCategoryRepository.findByIdAndWorkspaceId(idSubCategory, subCategoryRequest.getWorkspaceId());
         if(segmentFounded == null) {
             throw new CustomException("El segmento seleccionado no ha sido encontrado");
         }
 
-        if(!segmentFounded.getName().equals(segmentRequest.getName())) {
-            validateDuplicatedName(segmentRequest);
+        if(!segmentFounded.getName().equals(subCategoryRequest.getName())) {
+            validateDuplicatedName(subCategoryRequest);
         }
 
-        segmentFounded.setName(segmentRequest.getName().toUpperCase());
+        segmentFounded.setName(subCategoryRequest.getName().toUpperCase());
         return subCategoryRepository.save(segmentFounded);
     }
 
@@ -80,9 +80,9 @@ public class SubCategoryServiceImpl implements ISubCategoryService {
         subCategoryRepository.deleteById(segmentId);
     }
 
-    private void validateDuplicatedName(SubCategory segmentRequest) throws CustomException {
+    private void validateDuplicatedName(SubCategory subCategoryRequest) throws CustomException {
 
-        SubCategory segmentNameRepeated = subCategoryRepository.findByNameAndWorkspaceId(segmentRequest.getName().toUpperCase(), segmentRequest.getWorkspaceId());
+        SubCategory segmentNameRepeated = subCategoryRepository.findByNameAndWorkspaceId(subCategoryRequest.getName().toUpperCase(), subCategoryRequest.getWorkspaceId());
         if(segmentNameRepeated != null) {
             throw new CustomException("Ya existe un segmento con el nombre que intentas registrar");
         }

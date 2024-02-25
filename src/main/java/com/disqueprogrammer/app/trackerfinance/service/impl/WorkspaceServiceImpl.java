@@ -13,9 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.nio.file.AccessDeniedException;
+import java.util.*;
 
 @Service
 public class WorkspaceServiceImpl implements WorkspaceService {
@@ -39,82 +38,67 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         User userAuthenticated = authService.getUserAuthenticated();
         Optional<Workspace> workspaceFound = workspaceRepository.findById(workspaceId);
         if(workspaceFound.isEmpty())
-            throw new CustomException("No se pudo procesar el espacio de trabajo en esta operación, actualice su navegador e inténtelo de nuevo.");
+            throw new CustomException("No se encontró este espacio de trabajo seleccionado.");
 
         if(!workspaceFound.get().getUsers().stream().anyMatch(user -> user.getId().equals(userAuthenticated.getId())))
             throw new CustomException("No tienes permisos para este recurso.");
     }
 
     @Override
-    public Workspace save(Workspace workspaceReq, Long userParentId) throws UserNotFoundException, CustomException {
+    public Workspace createWorkspace(Workspace workspaceReq) throws UserNotFoundException, CustomException {
+
+        if(workspaceReq.getOwner() == null || workspaceReq.getOwner().getId() == 0)
+            throw new CustomException("El propietario es requerido.");
+
         // user validated exist
-        User userParent = userRepository.findById(Math.toIntExact(userParentId)).orElseThrow(()-> new UserNotFoundException("El usuario no ha sido encontrado"));
+        User userParent = userRepository.findById(Math.toIntExact(workspaceReq.getOwner().getId())).orElseThrow(()-> new UserNotFoundException("El usuario no ha sido encontrado"));
         // user role == super_admin
         if(!userParent.getRole().equals(Role.ROLE_SUPER_ADMIN.toString())) throw new CustomException("No tienes permisos para efectuar esta operación.");
         // workspace name exists
         Workspace workspaceFound = workspaceRepository.findByName(workspaceReq.getName());
         if(workspaceFound != null)  throw new CustomException("Ya existe un espacio de trabajo con el mismo nombre, ingrese otro.");
+
+        workspaceReq.setActive(true);
         //Associate user with worskpace
+        workspaceReq.setOwner(userParent);
         workspaceReq.getUsers().add(userParent);
 
         return workspaceRepository.save(workspaceReq);
     }
 
     @Override
-    public Workspace saveAssocOneUserWorkspaceRelationship(Long userParentId, Long userAssocId, Long workspaceId) throws CustomException, UserNotFoundException {
+    public Workspace associateUsersToWorkspace(Workspace workspaceReq) throws CustomException, UserNotFoundException {
+        /*
         // userParent exists
         User userParent = userRepository.findById(Math.toIntExact(userParentId)).orElseThrow(()-> new UserNotFoundException("El código del usuario administrador no sido encontrado"));
 
         // userParent has role super_admin // hasRole('ROLE_SUPER_ADMIN')
         if(!userParent.getRole().equals(Role.ROLE_SUPER_ADMIN.toString())) throw new CustomException("No tienes permisos para efectuar esta operación.");
+        */
+
+        if(workspaceReq.getOwner() == null || workspaceReq.getOwner().getId() == 0)
+            throw new CustomException("El propietario es requerido.");
 
         // Workspace exists
-        Workspace workspaceFound = workspaceRepository.findById(workspaceId).orElseThrow(()-> new CustomException("El espacio de trabajo no ha sido encontrado"));
-
-        // UserParent has this workspace
-        if(workspaceFound.getUsers().stream().noneMatch(user -> user.getId().equals(userParent.getId())))
-            throw new CustomException("Este usuario no tiene permisos para efectuar cambios a este espacio de trabajo.");
-
-        // userAssoc exists
-        User userAssoc = userRepository.findById(Math.toIntExact(userAssocId)).orElseThrow(()-> new UserNotFoundException("El código del usuario que intentas asociar no ha sido encontrado"));
-
-        // userAssoc dont has role super_admin
-        if(userAssoc.getRole().equals(Role.ROLE_SUPER_ADMIN.toString())) throw new CustomException("No puede haber más de un usuario padre en una tienda.");
-
-        // userAssoc is new in the list workspace users
-        if(workspaceFound.getUsers().stream().anyMatch(user -> user.getId().equals(userAssoc.getId())))
-            throw new CustomException("El usuario seleccionado ya se encuentra asociado a este espacio de trabajo.");
-
-        //Associate user with worskpace
-        workspaceFound.getUsers().add(userAssoc);
-
-        return workspaceRepository.save(workspaceFound);
-    }
-
-    @Override
-    public Workspace saveAssocUsersWorkspaceRelationship(Long userParentId, Long workspaceId, Workspace workspaceReq) throws CustomException, UserNotFoundException {
-        // userParent exists
-        User userParent = userRepository.findById(Math.toIntExact(userParentId)).orElseThrow(()-> new UserNotFoundException("El código del usuario administrador no sido encontrado"));
-
-        // userParent has role super_admin // hasRole('ROLE_SUPER_ADMIN')
-        if(!userParent.getRole().equals(Role.ROLE_SUPER_ADMIN.toString())) throw new CustomException("No tienes permisos para efectuar esta operación.");
-
-        // Workspace exists
-        Workspace workspaceFound = workspaceRepository.findById(workspaceId).orElseThrow(()-> new CustomException("El espacio de trabajo no ha sido encontrado"));
+        Workspace workspaceFound = workspaceRepository.findById(workspaceReq.getId()).orElseThrow(()-> new CustomException("El espacio de trabajo no ha sido encontrado"));
 
         // workspace name exists
         Workspace workspaceFoundByName= workspaceRepository.findByName(workspaceReq.getName());
         if(workspaceFoundByName != null && !Objects.equals(workspaceFoundByName.getId(), workspaceFound.getId()))  throw new CustomException("Ya existe un espacio de trabajo con el mismo nombre, ingrese otro.");
 
-        // UserParent has this workspace
-        if(workspaceFound.getUsers().stream().noneMatch(user -> user.getId().equals(userParent.getId())))
-            throw new CustomException("Este usuario no tiene permisos para efectuar cambios a este espacio de trabajo.");
+        User userAuthenticated = authService.getUserAuthenticated();
 
-        // setters new users assoc to workspace
-        workspaceFound.setUsers(workspaceReq.getUsers());
+        if(!Objects.equals(workspaceFound.getOwner().getId(), userAuthenticated.getId())) {
+            throw new CustomException("No cuentas con permisos para realizar esta operación, comunícaselo a tu administrador.");
+        }
 
-        return workspaceRepository.save(workspaceFound);
+        if (!workspaceReq.getUsers().contains(workspaceFound.getOwner())) {
+            workspaceReq.getUsers().add(workspaceFound.getOwner());
+        }
+
+        return workspaceRepository.save(workspaceReq);
     }
+
 
     @Override
     public List<Workspace> findAllByUserId(Long userId) throws UserNotFoundException {
@@ -123,9 +107,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public void deleteById(Long workspaceId) throws CustomException {
+    public void deleteById(Long workspaceId, Long id) throws CustomException {
         // Workspace exists
         Workspace workspaceFound = workspaceRepository.findById(workspaceId).orElseThrow(()-> new CustomException("El espacio de trabajo no ha sido encontrado"));
+        if(!Objects.equals(workspaceFound.getOwner().getId(), id)) throw new CustomException("No cuentas con permisos para realizar esta operación, comunícaselo a tu administrador.");
         workspaceRepository.deleteById(workspaceId);
     }
+
 }

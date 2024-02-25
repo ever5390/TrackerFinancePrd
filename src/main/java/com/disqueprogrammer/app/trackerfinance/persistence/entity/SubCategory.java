@@ -23,5 +23,7 @@ public class SubCategory {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    private boolean active;
+
     private Long workspaceId;
 }

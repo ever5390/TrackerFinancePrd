@@ -83,7 +83,7 @@ public class AuthService {
         user.setActive(true);
         user.setNotLocked(true);
         user.setRole(Role.ROLE_ADMIN.name());
-        user.setAuthorities(Role.ROLE_ADMIN.getAuthorities());
+        //user.setAuthorities(Role.ROLE_ADMIN.getAuthorities());
         userRepository.save(user);
 
         return new HttpResponse(HttpStatus.CREATED.value(), HttpStatus.CREATED, HttpStatus.CREATED.getReasonPhrase().toUpperCase().toString(),"Usuario creado exitosamente!!");
@@ -105,7 +105,8 @@ public class AuthService {
 
     public User getUserAuthenticated() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return (User) authentication.getPrincipal();
+        LOGGER.info("::::: user:: ::::"+authentication.getPrincipal().toString());
+        return ((UserPrincipal) authentication.getPrincipal()).getUser();
     }
 
 }

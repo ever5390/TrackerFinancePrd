@@ -22,6 +22,11 @@ public class Workspace {
 
     private String name;
 
+    private boolean active;
+
+    @ManyToOne
+    private User owner;
+
     @ManyToMany
     @JoinTable(
             name = "user_workspace",

@@ -25,5 +25,7 @@ public class Account {
 
     private double currentBalance;
 
+    private boolean active;
+
     private Long workspaceId;
 }
