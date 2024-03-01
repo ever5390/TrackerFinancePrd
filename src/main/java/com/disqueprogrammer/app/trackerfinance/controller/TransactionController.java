@@ -52,6 +52,7 @@ public class TransactionController {
 
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         transactionRequest.setWorkspaceId(workspaceId);
+        transactionRequest.setResponsableUser(workspaceService.getUserAuhenticated());
         return new ResponseEntity<>(transactionSaveService.save(transactionRequest), HttpStatus.CREATED);
     }
 
@@ -59,6 +60,7 @@ public class TransactionController {
     public ResponseEntity<String> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         nextTransactionRecurring.setWorkspaceId(workspaceId);
+        nextTransactionRecurring.setResponsableUser(workspaceService.getUserAuhenticated());
         transactionSaveService.saveNewTransactionRecurring(nextTransactionRecurring);
         return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
     }
@@ -66,6 +68,7 @@ public class TransactionController {
     @PutMapping("/{id}")
     public ResponseEntity<Transaction> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction, @Valid @RequestBody Transaction transactionRequest) throws CustomException, InsuficientFundsException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        transactionRequest.setResponsableUser(workspaceService.getUserAuhenticated());
         return new ResponseEntity<>(transactionUpdateService.update(transactionRequest, idTransaction), HttpStatus.OK);
     }
 
@@ -73,6 +76,7 @@ public class TransactionController {
     public ResponseEntity<Transaction> updateTxRecurring(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransactionReqToUpdate, @RequestBody Transaction nextTransactionRecurring) throws Exception {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         nextTransactionRecurring.setWorkspaceId(workspaceId);
+        nextTransactionRecurring.setResponsableUser(workspaceService.getUserAuhenticated());
         return new ResponseEntity<Transaction>(transactionUpdateService.updateTransactionRecurring(nextTransactionRecurring, idTransactionReqToUpdate), HttpStatus.CREATED);
     }
 
@@ -126,7 +130,7 @@ public class TransactionController {
     }
 
 
-    @GetMapping("/loan-pending")
+    @GetMapping("/loans-pending")
     public ResponseEntity<List<Transaction>> findByTypeAndStatusAndWorkspaceId(@PathVariable("workspaceId") Long workspaceId, @RequestParam TypeEnum type, @RequestParam StatusEnum status) throws Exception {
         return new ResponseEntity<>(transactionGetService.findByTypeAndStatusAndWorkspaceId(type, status, workspaceId), HttpStatus.OK);
     }

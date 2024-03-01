@@ -109,7 +109,7 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod().getName());
             movementDto.setCreateAt(transactions.get(i).getCreateAt());
             movementDto.setType(transactions.get(i).getType());
-            movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
+           // movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
             movementsDto.add(movementDto);
         }
 

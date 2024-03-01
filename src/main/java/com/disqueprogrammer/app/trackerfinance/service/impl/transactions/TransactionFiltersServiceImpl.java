@@ -189,7 +189,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
             movementDto.setSubCategory(transactions.get(i).getSubCategory().getName());
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod().getName());
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod() != null ? transactions.get(i).getPaymentMethod().getName(): "");
-            movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
+           // movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
             movementsDto.add(movementDto);
         }
 

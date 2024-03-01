@@ -17,7 +17,7 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long>, JpaSpecificationExecutor<Transaction> {
 
-    @Query("Select t from Transaction t where t.type = 'PAYMENT' and t.idLoanAssoc = :transactionLoanId and workspaceId =:workspaceId")
+    @Query("Select t from Transaction t where t.type = 'PAYMENT' and t.transactionLoanAssocToPay.id = :transactionLoanId and workspaceId =:workspaceId")
     List<Transaction> findPaymentsByLoanIdAssocAndWorkspaceId(Long transactionLoanId, Long workspaceId);
     @Query("Select t from Transaction t where t.paymentMethod.account.id = :accountId and workspaceId =:workspaceId")
     List<Transaction> findTransactionsByAccountIdAndWorkspaceId(Long accountId, Long workspaceId);

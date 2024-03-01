@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.AccessDeniedException;
 import java.util.*;
 
 @Service
@@ -42,6 +41,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         if(!workspaceFound.get().getUsers().stream().anyMatch(user -> user.getId().equals(userAuthenticated.getId())))
             throw new CustomException("No tienes permisos para este recurso.");
+    }
+
+    @Override
+    public User getUserAuhenticated() {
+        return authService.getUserAuthenticated();
     }
 
     @Override

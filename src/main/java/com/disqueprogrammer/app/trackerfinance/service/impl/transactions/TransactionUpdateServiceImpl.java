@@ -67,7 +67,7 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
 
             if (TypeEnum.PAYMENT.equals(transactionFounded.getType())) {
                 //get Loan associated
-                Long idTransactionLoanAssoc = transactionFounded.getIdLoanAssoc();
+                Long idTransactionLoanAssoc = transactionFounded.getTransactionLoanAssocToPay().getId();
                 if (idTransactionLoanAssoc == null) throw new CustomException("Debe asociar un prèstamo al que haga referencia el pago a registrado.");
                 Transaction transactionLoanAssoc = transactionRepository.findById(idTransactionLoanAssoc).orElseThrow(()-> new CustomException("El prèstamo al que hace referencia el pago registrado no existe."));
 
@@ -341,13 +341,13 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
         nextTransactionRecurring.setSubCategory(transactionReq.getSubCategory());
         nextTransactionRecurring.setStatus(transactionReq.getStatus());
         nextTransactionRecurring.setCreateAt(transactionReq.getCreateAt());
-        nextTransactionRecurring.setIdLoanAssoc(transactionReq.getIdLoanAssoc());
+        nextTransactionRecurring.setTransactionLoanAssocToPay(transactionReq.getTransactionLoanAssocToPay());
         nextTransactionRecurring.setAccount(transactionReq.getAccount());
         nextTransactionRecurring.setAccountDestiny(transactionReq.getAccountDestiny());
         nextTransactionRecurring.setPaymentMethod(transactionReq.getPaymentMethod());
         nextTransactionRecurring.setPaymentMethodDestiny(transactionReq.getPaymentMethodDestiny());
         nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());
-        nextTransactionRecurring.setUserId(transactionReq.getUserId());
+        nextTransactionRecurring.setResponsableUser(transactionReq.getResponsableUser());
         nextTransactionRecurring.setWorkspaceId(transactionReq.getWorkspaceId());
         return nextTransactionRecurring;
     }

@@ -7,6 +7,7 @@ import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.*;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.*;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.*;
+import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction.ITransactionSaveService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -56,6 +57,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         settingDefaultParameters(transactionRequest);
         validationAmount(transactionRequest.getAmount());
         validCreateAt(transactionRequest.getCreateAt());
+        //transactionRequest.setResponsableUser((validateResponsableUser(transactionRequest.getResponsableUser())));
         transactionRequest.setSubCategory((validateCategory(transactionRequest)));
         transactionRequest.setAccount(validateOnlyAccount(transactionRequest.getAccount()));
         transactionRequest.setAccountDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferAccount(transactionRequest.getAccount(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
@@ -73,6 +75,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             Transaction transactionLoanAssocUpdated = updateLoanAssocFromPaymentToSave(transactionRequest);
             transactionRepository.save(transactionLoanAssocUpdated);
 
+            transactionRequest.setTransactionLoanAssocToPay(transactionLoanAssocUpdated);
             //Update Counterpart to payment request
             transactionRequest.setCounterpart(transactionLoanAssocUpdated.getCounterpart());
         }
@@ -235,7 +238,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
         //For all types other than Payment : loanAssoc = null
         if (!TypeEnum.PAYMENT.equals(transactionRequest.getType())) {
-            transactionRequest.setIdLoanAssoc(null);
+            transactionRequest.setTransactionLoanAssocToPay(null);
         }
 
         //For all types other than LOAN
@@ -269,6 +272,13 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     }
 
+    private Transaction validTxLoanAssocToPayType(Transaction transactionLoanAssocToPay) throws CustomException {
+        if(transactionLoanAssocToPay == null || transactionLoanAssocToPay.getTransactionLoanAssocToPay().getId() == null)
+            throw new CustomException("Es necesario que seleccione la operación de préstamo al que hace referencia el pago que estás registrando");
+
+        return transactionRepository.findById(transactionLoanAssocToPay.getId()).orElseThrow(()-> new CustomException("No se ecnontró el préstamos que seleccionó como referencia para su pago a realizar, seleccione nuevamente."));
+    }
+
     private Counterpart validCounterpartForLoanTransaction(Transaction transactionRequest) throws UnspecifiedCounterpartException {
 
         String message = transactionRequest.getAction().equals(ActionEnum.RECIBÍ)?" de quien se recibió ": "a quien se otorgó ";
@@ -280,7 +290,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     private Transaction updateLoanAssocFromPaymentToSave(Transaction transactionRequest) throws CustomException {
 
-            Long idTransactionLoanAssoc = transactionRequest.getIdLoanAssoc();
+            Long idTransactionLoanAssoc = transactionRequest.getTransactionLoanAssocToPay().getId();
             if (idTransactionLoanAssoc == null) throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
             Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
             if(transactionLoanAssoc == null) new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
@@ -451,13 +461,13 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         nextTransactionRecurring.setSubCategory(transactionReq.getSubCategory());
         nextTransactionRecurring.setStatus(transactionReq.getStatus());
         nextTransactionRecurring.setCreateAt(transactionReq.getCreateAt());
-        nextTransactionRecurring.setIdLoanAssoc(transactionReq.getIdLoanAssoc());
+        nextTransactionRecurring.setTransactionLoanAssocToPay(transactionReq.getTransactionLoanAssocToPay());
         nextTransactionRecurring.setAccount(transactionReq.getAccount());
         nextTransactionRecurring.setAccountDestiny(transactionReq.getAccountDestiny());
         nextTransactionRecurring.setPaymentMethod(transactionReq.getPaymentMethod());
         nextTransactionRecurring.setPaymentMethodDestiny(transactionReq.getPaymentMethodDestiny());
         nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());
-        nextTransactionRecurring.setUserId(transactionReq.getUserId());
+        nextTransactionRecurring.setResponsableUser(transactionReq.getResponsableUser());
         nextTransactionRecurring.setWorkspaceId(transactionReq.getWorkspaceId());
         return nextTransactionRecurring;
     }

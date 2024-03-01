@@ -4,6 +4,7 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEn
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
+import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
 import jakarta.persistence.*;
 
 import lombok.*;
@@ -75,9 +76,13 @@ public class Transaction {
     @JoinColumn(name = "recurring_id", nullable = true)
     private Recurring recurring;
 
-    private Long idLoanAssoc;
+    @ManyToOne
+    @JoinColumn(name = "transaction_loan_assoc_to_pay_id", nullable = true)
+    private Transaction transactionLoanAssocToPay;
 
-    private Long userId;
+    @ManyToOne
+    @JoinColumn(name = "responsable_user", nullable = false)
+    private User responsableUser;
 
     private Long workspaceId;
 

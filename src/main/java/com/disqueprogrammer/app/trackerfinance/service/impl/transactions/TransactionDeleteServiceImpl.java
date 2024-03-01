@@ -98,7 +98,7 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
     }
 
     private Transaction updateLoanAssocReverseByDeleteTx(Transaction transactionRequest) {
-        Long idTransactionLoanAssoc = transactionRequest.getIdLoanAssoc();
+        Long idTransactionLoanAssoc = transactionRequest.getTransactionLoanAssocToPay().getId();
         Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
         double currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
         double newRemainingLoanAssoc = currentRemainingLoanAssoc + transactionRequest.getAmount();
