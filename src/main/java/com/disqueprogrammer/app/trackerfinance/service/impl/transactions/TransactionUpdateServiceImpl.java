@@ -83,6 +83,7 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
             }
             
             //Only these data are updated
+            transactionFounded.setTags(!transactionRequest.getTags().isEmpty() ?transactionRequest.getTags():transactionFounded.getTags());
             transactionFounded.setAmount(transactionRequest.getAmount());
             transactionFounded.setCreateAt(transactionRequest.getCreateAt());
             transactionFounded.setDescription(transactionRequest.getDescription());
@@ -104,7 +105,7 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
 
     private void reverseAndUpdateBalanceAvailableByUpdate(Transaction transactionRequest, Transaction transactionFounded) throws InsuficientFundsException {
         //Setting a new available amount in the account
-        Long idAccount = transactionFounded.getPaymentMethod().getAccount().getId();
+        Long idAccount = transactionFounded.getAccount().getId();
         Account accountCurrent = accountRepository.findById(idAccount).get();
         double newBalance = getNewBalanceAccountUpdate(transactionFounded, transactionRequest, accountCurrent);
         accountCurrent.setCurrentBalance(newBalance);
@@ -114,8 +115,8 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
     }
 
     private void reverseAndUpdateBalanceAvailableAccountsOriginAndDestinyByUpdateTx(Transaction transactionRequest, Transaction transactionFounded) throws InsuficientFundsException {
-        Long idAccountOrigin = transactionFounded.getPaymentMethod().getAccount().getId();
-        Long idAccountDestiny = transactionFounded.getPaymentMethodDestiny().getAccount().getId();
+        Long idAccountOrigin = transactionFounded.getAccount().getId();
+        Long idAccountDestiny = transactionFounded.getAccount().getId();
         //Al estar registrados ya se aseguran que las cuentas existan y pertenezcan al usuario.
         Account accountOrigin = accountRepository.findById(idAccountOrigin).get();
         Account accountDestiny = accountRepository.findById(idAccountDestiny).get();
@@ -341,6 +342,8 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
         nextTransactionRecurring.setStatus(transactionReq.getStatus());
         nextTransactionRecurring.setCreateAt(transactionReq.getCreateAt());
         nextTransactionRecurring.setIdLoanAssoc(transactionReq.getIdLoanAssoc());
+        nextTransactionRecurring.setAccount(transactionReq.getAccount());
+        nextTransactionRecurring.setAccountDestiny(transactionReq.getAccountDestiny());
         nextTransactionRecurring.setPaymentMethod(transactionReq.getPaymentMethod());
         nextTransactionRecurring.setPaymentMethodDestiny(transactionReq.getPaymentMethodDestiny());
         nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());

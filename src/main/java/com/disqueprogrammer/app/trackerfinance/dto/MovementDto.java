@@ -22,11 +22,11 @@ public class MovementDto {
 
     private ActionEnum action;
 
-    private String category;
+    private String subCategory;
+
+    private String account;
 
     private String paymentMethod;
-
-    private String segment;
 
     private LocalDateTime createAt;
 

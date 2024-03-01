@@ -23,7 +23,7 @@ public class TargetServiceImpl implements TagService {
     }
 
     private void validateDuplicatedName(Tag tag) throws CustomException {
-        Tag tagFounded = tagRepository.findByTagNameAndWorkspaceId(tag.getTagName(), tag.getWorkspaceId());
+        Tag tagFounded = tagRepository.findByNameAndWorkspaceId(tag.getName(), tag.getWorkspaceId());
         if(tagFounded != null)
             throw new CustomException("Ya existe un registro con el nombre indicado, ingrese otro.");
     }
@@ -41,7 +41,7 @@ public class TargetServiceImpl implements TagService {
     @Override
     public Tag update(Tag tag, Long tagId) throws CustomException {
         Tag tagFounded = tagRepository.findByIdAndWorkspaceId(tagId, tag.getWorkspaceId());
-        if(tagFounded != null && !tagFounded.getTagName().equals(tag.getTagName()))
+        if(tagFounded != null && !tagFounded.getName().equalsIgnoreCase(tag.getName()))
             throw new CustomException("Ya existe un registro con el nombre que intentas actualizar, ingrese otro.");
         return tagRepository.save(tag);
     }

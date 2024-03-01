@@ -57,9 +57,11 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         validationAmount(transactionRequest.getAmount());
         validCreateAt(transactionRequest.getCreateAt());
         transactionRequest.setSubCategory((validateCategory(transactionRequest)));
-        transactionRequest.setPaymentMethod(validatePaymentMethod(transactionRequest.getPaymentMethod(), transactionRequest.getType(), "origen", transactionRequest.getWorkspaceId()));
-        transactionRequest.setPaymentMethodDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validatePaymentMethod(transactionRequest.getPaymentMethodDestiny(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
-        validateAccountBalanceAvailableForEnteredAmount(transactionRequest, transactionRequest.getPaymentMethod().getAccount());
+        transactionRequest.setAccount(validateOnlyAccount(transactionRequest.getAccount()));
+        transactionRequest.setAccountDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferAccount(transactionRequest.getAccount(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
+        transactionRequest.setPaymentMethod((transactionRequest.getPaymentMethod() == null || transactionRequest.getPaymentMethod().getId() == 0)? null: validateonlyPaymentMethod(transactionRequest.getPaymentMethod()));
+        transactionRequest.setPaymentMethodDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferPaymentMethod(transactionRequest.getPaymentMethodDestiny(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
+        validateAccountBalanceAvailableForEnteredAmount(transactionRequest, transactionRequest.getAccount());
 
         if (TypeEnum.LOAN.equals(transactionRequest.getType())) {
             //Valid counterparty counterpart
@@ -77,7 +79,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
         if (!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())) {
             //proccessing balance account
-            Long idAccount = transactionRequest.getPaymentMethod().getAccount().getId();
+            Long idAccount = transactionRequest.getAccount().getId();
             Account account = accountRepository.findByIdAndWorkspaceId(idAccount, transactionRequest.getWorkspaceId());
             account.setCurrentBalance(getNewBalance(transactionRequest, account));
 
@@ -87,8 +89,8 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
         if (TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())) {
 
-            Account accountOrigin = transactionRequest.getPaymentMethod().getAccount();
-            Account accountDestiny = transactionRequest.getPaymentMethodDestiny().getAccount();
+            Account accountOrigin = transactionRequest.getAccount();
+            Account accountDestiny = transactionRequest.getAccount();
 
             validationOfEqualsAccounts(accountOrigin, accountDestiny);
 
@@ -114,6 +116,20 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         return transactionRepository.save(transactionRequest);
     }
 
+    private Account validateOnlyAccount(Account account) throws CustomException {
+
+        if(account == null || StringUtils.isEmpty(account.getId().toString())) {
+            throw new CustomException("Seleccione una cuenta.");
+        }
+
+        Account accounFound = accountRepository.findByIdAndWorkspaceId(account.getId(), account.getWorkspaceId());
+        if(accounFound == null) {
+            throw new CustomException("La cuenta seleccionada no ha sido encontrada.");
+        }
+
+        return accounFound;
+    }
+
     private void validateAccountBalanceAvailableForEnteredAmount(Transaction transactionRequest, Account account) throws InsuficientFundsException {
         if (transactionRequest.getAction().equals(ActionEnum.REALICÉ) && transactionRequest.getAmount() > account.getCurrentBalance())  throw new InsuficientFundsException("Saldo no disponible en la cuenta origen para esta operación");
     }
@@ -135,33 +151,69 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         if (amount <= 0)  throw new CustomException("El monto de la operación debe ser mayor a cero.");
     }
 
-    private PaymentMethod validatePaymentMethod(PaymentMethod paymentMethodReq, TypeEnum typeOperation, String typePaymentMethod, Long workspaceId) throws CustomException {
+    private Account validateTransferAccount(Account accountReq, TypeEnum typeOperation, String operationType, Long workspaceId) throws CustomException {
+
+        String originOrDestiny = TypeEnum.TRANSFERENCE.equals(typeOperation)?operationType:"";
+
+        if(accountReq == null || StringUtils.isEmpty(accountReq.getId().toString())) {
+            throw new CustomException("Seleccione una cuenta " + originOrDestiny + " por favor");
+        }
+
+        Account accountFound = accountRepository.findByIdAndWorkspaceId(accountReq.getId(), workspaceId);
+        if(accountFound == null) {
+            throw new CustomException("La cuenta " + originOrDestiny  + " seleccionada no ha sido encontrado");
+        }
+
+        return accountFound;
+    }
+
+    private PaymentMethod validateonlyPaymentMethod(PaymentMethod paymentMethodReq) throws CustomException {
+
+
+        if(paymentMethodReq == null || paymentMethodReq.getId() == 0 || StringUtils.isEmpty(paymentMethodReq.getId().toString())) {
+            return null;
+        }
+
+        PaymentMethod paymentMethodFound = paymentMethodRepository.findByIdAndWorkspaceId(paymentMethodReq.getId(), paymentMethodReq.getWorkspaceId());
+        if(paymentMethodFound == null) {
+            throw new CustomException("El método de pago no ha sido encontrado");
+        }
+
+        return paymentMethodFound;
+    }
+
+    private PaymentMethod validateTransferPaymentMethod(PaymentMethod paymentMethodReq, TypeEnum typeOperation, String typePaymentMethod, Long workspaceId) throws CustomException {
 
         String originOrDestiny = TypeEnum.TRANSFERENCE.equals(typeOperation)?typePaymentMethod:"";
 
-        if(paymentMethodReq == null || StringUtils.isEmpty(paymentMethodReq.getId().toString())) {
-            throw new CustomException("El método de pago " + originOrDestiny + " no ha sido encontrado");
+        if(paymentMethodReq == null || paymentMethodReq.getId() == 0 || StringUtils.isEmpty(paymentMethodReq.getId().toString())) {
+            return null;
         }
 
-        PaymentMethod paymentMethod = paymentMethodRepository.findByIdAndWorkspaceId(paymentMethodReq.getId(), workspaceId);
-        if(paymentMethod == null) {
+        PaymentMethod paymentMethodFound = paymentMethodRepository.findByIdAndWorkspaceId(paymentMethodReq.getId(), workspaceId);
+        if(paymentMethodFound == null) {
             throw new CustomException("El método de pago " + originOrDestiny  + " no ha sido encontrado");
         }
 
-        return paymentMethod;
+        return paymentMethodFound;
     }
 
     private SubCategory validateCategory(Transaction transactionRequest) throws CustomException {
 
-        if(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getSubCategory() != null && transactionRequest.getSubCategory().getId() != null && transactionRequest.getSubCategory().getId() != 0 ) {
-            SubCategory subCategory = subCategoryRepository.findByIdAndWorkspaceId(transactionRequest.getSubCategory().getId(), transactionRequest.getWorkspaceId());
-            if(subCategory == null) {
-                throw new CustomException("La categoría no ha sido encontrado");
-            }
-            return subCategory;
+        if(TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())) {
+            return null;
         }
 
-        return null;
+        if(transactionRequest.getSubCategory() == null || transactionRequest.getSubCategory().getId()==null || transactionRequest.getSubCategory().getId() == 0) {
+            throw new CustomException("Seleccione una categoría por favor.");
+        }
+
+        SubCategory subCategory = subCategoryRepository.findByIdAndWorkspaceId(transactionRequest.getSubCategory().getId(), transactionRequest.getWorkspaceId());
+        if(subCategory == null) {
+            throw new CustomException("La categoría no ha sido encontrada, pruebe nuevamente");
+        }
+        return subCategory;
+
     }
 
     private void settingDefaultParameters(Transaction transactionRequest) throws CustomException {
@@ -400,6 +452,8 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         nextTransactionRecurring.setStatus(transactionReq.getStatus());
         nextTransactionRecurring.setCreateAt(transactionReq.getCreateAt());
         nextTransactionRecurring.setIdLoanAssoc(transactionReq.getIdLoanAssoc());
+        nextTransactionRecurring.setAccount(transactionReq.getAccount());
+        nextTransactionRecurring.setAccountDestiny(transactionReq.getAccountDestiny());
         nextTransactionRecurring.setPaymentMethod(transactionReq.getPaymentMethod());
         nextTransactionRecurring.setPaymentMethodDestiny(transactionReq.getPaymentMethodDestiny());
         nextTransactionRecurring.setCounterpart(transactionReq.getCounterpart());

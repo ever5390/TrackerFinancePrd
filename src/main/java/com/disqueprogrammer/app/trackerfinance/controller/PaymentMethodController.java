@@ -29,17 +29,17 @@ public class PaymentMethodController extends ExceptionHandling {
     private final WorkspaceService workspaceService;
 
     @PostMapping
-    public ResponseEntity<PaymentMethod> save(@PathVariable("workspaceId") Long workspaceId, @Valid  @RequestBody PaymentMethod counterpartReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+    public ResponseEntity<PaymentMethod> save(@PathVariable("workspaceId") Long workspaceId, @Valid  @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
-        counterpartReq.getAccount().setWorkspaceId(workspaceId);
-        return new ResponseEntity<>(paymentMethodService.save(counterpartReq), HttpStatus.CREATED);
+        paymentMethodReq.setWorkspaceId(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.save(paymentMethodReq), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PaymentMethod> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod counterpartReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+    public ResponseEntity<PaymentMethod> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
-        counterpartReq.getAccount().setWorkspaceId(workspaceId);
-        return new ResponseEntity<>(paymentMethodService.update(counterpartReq, idPaymentMethod), HttpStatus.OK);
+        paymentMethodReq.setWorkspaceId(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.update(paymentMethodReq, idPaymentMethod), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
@@ -53,6 +53,12 @@ public class PaymentMethodController extends ExceptionHandling {
     public ResponseEntity<List<PaymentMethod>> findAll(@PathVariable("workspaceId") Long workspaceId) throws CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         return new ResponseEntity<>(paymentMethodService.findByWorkspaceId(workspaceId), HttpStatus.OK);
+    }
+
+    @GetMapping("/account/{id}")
+    public ResponseEntity<List<PaymentMethod>> findByAccountId(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws ObjectNotFoundException, CustomException, AccountNotFoundException {
+        workspaceService.validationWorkspaceUserRelationship(workspaceId);
+        return new ResponseEntity<>(paymentMethodService.findByAccountIdANdWorkspaceId(idAccount, workspaceId), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")

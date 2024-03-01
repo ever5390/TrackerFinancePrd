@@ -2,10 +2,7 @@ package com.disqueprogrammer.app.trackerfinance.persistence.entity;
 
 import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
@@ -13,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+@ToString
 @Entity
 public class Workspace {
 
@@ -25,6 +23,7 @@ public class Workspace {
     private boolean active;
 
     @ManyToOne
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
     @ManyToMany

@@ -48,7 +48,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
     }
 
     @Override
-    public ResumeMovementDto findMovementsByFilters(Long WorkspaceIdParam, String startDate, String endDate, TypeEnum type, StatusEnum status, String category, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action) throws Exception {
+    public ResumeMovementDto findMovementsByFilters(Long WorkspaceIdParam, String startDate, String endDate, TypeEnum type, StatusEnum status, String subCategory, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action) throws Exception {
 
         ResumeMovementDto resumeMovementDto = new ResumeMovementDto();
 
@@ -64,7 +64,7 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
         LOGGER.info("::: endDateD: "+endDateD);
 
         SearcherTransactionSpecification specification = new SearcherTransactionSpecification(WorkspaceIdParam, startDateD,
-                endDateD, type, status, category, description, segment, account, paymentMethod, block, action);
+                endDateD, type, status, subCategory, description, segment, account, paymentMethod, block, action);
 
         List<Transaction> transactions = transactionRepository.findAll(specification);
 
@@ -105,31 +105,31 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
 
             if(transactions.get(i).getType().equals(TypeEnum.TRANSFERENCE)) {
 
-                descriptionToShow = transactions.get(i).getType().toString().toUpperCase() + " ( Desde " +  transactions.get(i).getPaymentMethod().getName() +
-                        " hacia " + transactions.get(i).getPaymentMethodDestiny().getName()  + ")";
+                descriptionToShow = transactions.get(i).getType().toString().toUpperCase() + " ( Desde " +  transactions.get(i).getAccount().getName() +
+                        " hacia " + transactions.get(i).getAccountDestiny().getName()  + ")";
 
                 if(account != null){
 
-                    if(account.toUpperCase().equals(transactions.get(i).getPaymentMethod().getAccount().getName().toUpperCase())){
+                    if(account.toUpperCase().equals(transactions.get(i).getAccount().getName().toUpperCase())){
                         totalOUT+= amountMov;
                         amountMovSave = "-"+ amountMovSave;
                         descriptionToShow= transactions.get(i).getType().toString().toUpperCase();
 
-                        if(transactions.get(i).getPaymentMethodDestiny().getAccount().getName().equals("EFECTIVO")) {
+                        if(transactions.get(i).getAccountDestiny().getName().equals("EFECTIVO")) {
                             descriptionToShow = "RETIRO DE EFECTIVO";
                         }
 
                         if(account.equals("EFECTIVO")) {
                             descriptionToShow = "DEPÓSITO DE EFECTIVO";
                         }
-                        descriptionToShow+= " ( Hacia " + transactions.get(i).getPaymentMethodDestiny().getAccount().getName()  + ")";
+                        descriptionToShow+= " ( Hacia " + transactions.get(i).getAccountDestiny().getName()  + ")";
                     }
 
-                    if(account.toUpperCase().equals(transactions.get(i).getPaymentMethodDestiny().getAccount().getName().toUpperCase())){
+                    if(account.toUpperCase().equals(transactions.get(i).getAccountDestiny().getName().toUpperCase())){
                         totalIN+= amountMov;
                         amountMovSave = "+"+ amountMovSave;
                         descriptionToShow= transactions.get(i).getType().toString().toUpperCase();
-                        if(transactions.get(i).getPaymentMethod().getAccount().getName().equals("EFECTIVO")) {
+                        if(transactions.get(i).getAccount().getName().equals("EFECTIVO")) {
                             descriptionToShow = "DEPÓSITO DE EFECTIVO";
                         }
 
@@ -137,40 +137,40 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
                             descriptionToShow = "RETIRO DE EFECTIVO";
                         }
 
-                        descriptionToShow+=" ( Desde " +  transactions.get(i).getPaymentMethod().getAccount().getName() + ")";
+                        descriptionToShow+=" ( Desde " +  transactions.get(i).getAccount().getName() + ")";
                     }
 
                 }
                 LOGGER.info("::::: account is null && pm != null ? :" + (account == null && paymentMethod != null));
                 if(account == null && paymentMethod != null){
                     LOGGER.info("::::: entró :::");
-                    if(paymentMethod.toUpperCase().equals(transactions.get(i).getPaymentMethod().getName().toUpperCase())){
+                    if(paymentMethod.toUpperCase().equals(transactions.get(i).getAccount().getName().toUpperCase())){
                         totalOUT+= amountMov;
                         amountMovSave = "-"+ amountMovSave;
                         descriptionToShow= transactions.get(i).getType().toString().toUpperCase();
 
-                        if(transactions.get(i).getPaymentMethodDestiny().getAccount().getName().equals("EFECTIVO")) {
+                        if(transactions.get(i).getAccount().getName().equals("EFECTIVO")) {
                             descriptionToShow = "RETIRO DE EFECTIVO";
                         }
 
                         if(account.equals("EFECTIVO")) {
                             descriptionToShow = "DEPÓSITO DE EFECTIVO";
                         }
-                        descriptionToShow+= " ( Hacia " + transactions.get(i).getPaymentMethodDestiny().getName()  + ")";
+                        descriptionToShow+= " ( Hacia " + transactions.get(i).getAccountDestiny().getName()  + ")";
                     }
 
-                    if(paymentMethod.toUpperCase().equals(transactions.get(i).getPaymentMethodDestiny().getName().toUpperCase())){
+                    if(paymentMethod.toUpperCase().equals(transactions.get(i).getAccountDestiny().getName().toUpperCase())){
                         totalIN+= amountMov;
                         amountMovSave = "+"+ amountMovSave;
                         descriptionToShow= transactions.get(i).getType().toString().toUpperCase();
-                        if(transactions.get(i).getPaymentMethod().getAccount().getName().equals("EFECTIVO")) {
+                        if(transactions.get(i).getAccount().getName().equals("EFECTIVO")) {
                             descriptionToShow = "DEPÓSITO DE EFECTIVO";
                         }
 
                         if(account.equals("EFECTIVO")) {
                             descriptionToShow = "RETIRO DE EFECTIVO";
                         }
-                        descriptionToShow+=" ( Desde " +  transactions.get(i).getPaymentMethod().getName() + ")";
+                        descriptionToShow+=" ( Desde " +  transactions.get(i).getAccount().getName() + ")";
                     }
 
                 }
@@ -185,7 +185,9 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
             movementDto.setCreateAt(transactions.get(i).getCreateAt());
             movementDto.setType(transactions.get(i).getType());
             movementDto.setAction(transactions.get(i).getAction());
-            movementDto.setCategory(transactions.get(i).getSubCategory() != null?transactions.get(i).getSubCategory().getName():"");
+            movementDto.setAccount(transactions.get(i).getAccount().getName());
+            movementDto.setSubCategory(transactions.get(i).getSubCategory().getName());
+            movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod().getName());
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod() != null ? transactions.get(i).getPaymentMethod().getName(): "");
             movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
             movementsDto.add(movementDto);

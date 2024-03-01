@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @CrossOrigin(origins = {"http://localhost:4200"})
 @Validated
-@RequestMapping("/api/v2/workspace/{workspaceId}/segments")
+@RequestMapping("/api/v2/workspace/{workspaceId}/subcategories")
 public class SubCategoryController {
 
     private final ISubCategoryService subCategoryService;

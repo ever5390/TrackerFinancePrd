@@ -6,10 +6,7 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEn
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
 import jakarta.persistence.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 @Entity
 public class Transaction {
@@ -36,9 +34,18 @@ public class Transaction {
     private TypeEnum type;
 
     @ManyToOne
+    private Account account;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_method_id", nullable = true)
     private PaymentMethod paymentMethod;
 
     @ManyToOne
+    @JoinColumn(name = "account_destiny_id", nullable = true)
+    private Account accountDestiny;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_method_destiny_id", nullable = true)
     private PaymentMethod paymentMethodDestiny;
 
     @ManyToOne
@@ -65,6 +72,7 @@ public class Transaction {
     private Counterpart counterpart;
 
     @OneToOne
+    @JoinColumn(name = "recurring_id", nullable = true)
     private Recurring recurring;
 
     private Long idLoanAssoc;

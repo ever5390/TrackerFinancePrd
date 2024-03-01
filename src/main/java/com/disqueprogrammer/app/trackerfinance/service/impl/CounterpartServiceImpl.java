@@ -1,5 +1,6 @@
 package com.disqueprogrammer.app.trackerfinance.service.impl;
 
+import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Counterpart;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectExistsException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
@@ -30,7 +31,7 @@ public class CounterpartServiceImpl implements ICounterpartService {
     }
 
     @Override
-    public Counterpart save(Counterpart counterpartRequest) throws ObjectExistsException, ObjectNotFoundException {
+    public Counterpart save(Counterpart counterpartRequest) throws ObjectExistsException, ObjectNotFoundException, CustomException {
         validNameCounterpart(counterpartRequest.getName(), counterpartRequest.getWorkspaceId());
         if(!StringUtils.isEmpty(counterpartRequest.getEmail())) {
             validEmailCounterpart(counterpartRequest.getEmail(), counterpartRequest.getWorkspaceId());
@@ -38,20 +39,20 @@ public class CounterpartServiceImpl implements ICounterpartService {
         return counterpartRepository.save(counterpartRequest);
     }
 
-    private void validNameCounterpart(String name, Long workspaceId) {
-        if(StringUtils.isEmpty(name)) throw new IllegalArgumentException("El campo nombre es requerido");
+    private void validNameCounterpart(String name, Long workspaceId) throws CustomException {
+        if(StringUtils.isEmpty(name)) throw new CustomException("El campo nombre es requerido");
 
         Counterpart counterpartFoundedByName = counterpartRepository.findByNameAndWorkspaceId(name, workspaceId);
-        if (counterpartFoundedByName != null) throw new IllegalArgumentException("Ya existe un miembro con el nombre: " + name + ", ingrese otro");
+        if (counterpartFoundedByName != null) throw new CustomException("Ya existe un miembro con el nombre: " + name + ", ingrese otro");
     }
 
-    private void validEmailCounterpart(String email, Long workspaceId) {
+    private void validEmailCounterpart(String email, Long workspaceId) throws CustomException {
         boolean hasValidFormatEmail = validEmailFormat(email);
         if(!hasValidFormatEmail)
-            throw new IllegalArgumentException("El email ingresado no tiene un formato correcto");
+            throw new CustomException("El email ingresado no tiene un formato correcto");
 
         Counterpart counterpartFoundedByEmail = counterpartRepository.findByEmailAndWorkspaceId(email, workspaceId);
-        if (counterpartFoundedByEmail != null) throw new IllegalArgumentException("Ya existe un miembro con el email: " + email + ", ingrese otro");
+        if (counterpartFoundedByEmail != null) throw new CustomException("Ya existe un miembro con el email: " + email + ", ingrese otro");
     }
 
     public boolean validEmailFormat(String email) {
@@ -76,18 +77,18 @@ public class CounterpartServiceImpl implements ICounterpartService {
     }
 
     @Override
-    public Counterpart update(Counterpart counterpartRequest, Long counterpartId) throws ObjectExistsException, ObjectNotFoundException {
+    public Counterpart update(Counterpart counterpartRequest, Long counterpartId) throws ObjectExistsException, ObjectNotFoundException, CustomException {
 
         Counterpart counterpartFounded = counterpartRepository.findByIdAndWorkspaceId(counterpartId, counterpartRequest.getWorkspaceId());
 
         if(counterpartFounded == null)
             throw  new ObjectNotFoundException("No se encontró al miembro seleccionado");
 
-        if(!counterpartRequest.getName().equals(counterpartFounded.getName())) {
+        if(!counterpartRequest.getName().equalsIgnoreCase(counterpartFounded.getName())) {
             validNameCounterpart(counterpartRequest.getName(), counterpartRequest.getWorkspaceId());
         }
 
-        if(!counterpartFounded.getEmail().equals(counterpartRequest.getEmail())) {
+        if(!counterpartFounded.getEmail().equalsIgnoreCase(counterpartRequest.getEmail())) {
             validEmailCounterpart(counterpartRequest.getEmail(), counterpartRequest.getWorkspaceId());
         }
 

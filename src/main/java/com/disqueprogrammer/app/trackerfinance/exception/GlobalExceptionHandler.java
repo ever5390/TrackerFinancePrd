@@ -123,6 +123,11 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(NewBalanceLessThanCurrentBalanceException.class)
+    public ResponseEntity<HttpResponse> newBalanceLessThanCurrentBalanceException (NewBalanceLessThanCurrentBalanceException exception) {
+        return createHttpResponse(exception.getMessage());
+    }
+
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<HttpResponse> customException (CustomException exception) {
         return createHttpResponse(exception.getMessage());

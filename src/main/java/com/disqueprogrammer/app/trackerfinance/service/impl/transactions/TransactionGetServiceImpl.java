@@ -87,15 +87,15 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
 
             if(transactions.get(i).getType().equals(TypeEnum.TRANSFERENCE)) {
 
-                descriptionToShow = transactions.get(i).getType().toString().toUpperCase() + " ( Desde " +  transactions.get(i).getPaymentMethod().getName() +
-                        " hacia " + transactions.get(i).getPaymentMethodDestiny().getName()  + ")";
+                descriptionToShow = transactions.get(i).getType().toString().toUpperCase() + " ( Desde " +  transactions.get(i).getAccount().getName() +
+                        " hacia " + transactions.get(i).getAccountDestiny().getName()  + ")";
 
-                if(transactions.get(i).getPaymentMethodDestiny().getName().equals("EFECTIVO")) {
-                    descriptionToShow = "RETIRO DE EFECTIVO: ( Desde cuenta " + transactions.get(i).getPaymentMethod().getAccount().getName() + ")";
+                if(transactions.get(i).getAccountDestiny().getName().equals("EFECTIVO")) {
+                    descriptionToShow = "RETIRO DE EFECTIVO: ( Desde cuenta " + transactions.get(i).getAccount().getName() + ")";
                 }
 
-                if(transactions.get(i).getPaymentMethod().getName().equals("EFECTIVO")) {
-                    descriptionToShow = "DEPÓSITO DE EFECTIVO: ( Hacia cuenta " + transactions.get(i).getPaymentMethodDestiny().getAccount().getName() + ")";
+                if(transactions.get(i).getAccount().getName().equals("EFECTIVO")) {
+                    descriptionToShow = "DEPÓSITO DE EFECTIVO: ( Hacia cuenta " + transactions.get(i).getAccount().getName() + ")";
                 }
 
             }
@@ -104,6 +104,9 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
             movementDto.setHeaderTitle(descriptionToShow);
             movementDto.setDescription(reason.toLowerCase());
             movementDto.setStatus(transactions.get(i).getStatus().toString());
+            movementDto.setAccount(transactions.get(i).getAccount().getName());
+            movementDto.setSubCategory(transactions.get(i).getSubCategory().getName());
+            movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod().getName());
             movementDto.setCreateAt(transactions.get(i).getCreateAt());
             movementDto.setType(transactions.get(i).getType());
             movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());

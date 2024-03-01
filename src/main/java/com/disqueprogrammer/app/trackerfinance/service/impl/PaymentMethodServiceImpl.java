@@ -12,6 +12,8 @@ import com.disqueprogrammer.app.trackerfinance.persistence.repository.PaymentMet
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.TransactionRepository;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.IPaymentMethodService;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,6 +23,8 @@ import java.util.Optional;
 @Service
 public class PaymentMethodServiceImpl implements IPaymentMethodService {
 
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+
     private final PaymentMethodRepository paymentMethodRepository;
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
@@ -29,13 +33,17 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     public PaymentMethod save(PaymentMethod paymentMethodRequest) throws ObjectExistsException, AccountNotFoundException {
         validateDuplicatedName(paymentMethodRequest);
         validateAccountAssoc(paymentMethodRequest);
-        paymentMethodRequest.setName(paymentMethodRequest.getName().toUpperCase());
+        paymentMethodRequest.setName(paymentMethodRequest.getName());
         paymentMethodRequest.setActive(true);
         return paymentMethodRepository.save(paymentMethodRequest);
     }
 
     private void validateAccountAssoc(PaymentMethod paymentMethodRequest) throws AccountNotFoundException {
-        Account account = accountRepository.findByIdAndWorkspaceId(paymentMethodRequest.getAccount().getId(), paymentMethodRequest.getAccount().getWorkspaceId());
+        LOGGER.info(paymentMethodRequest.toString());
+        if(paymentMethodRequest.getAccount() == null || paymentMethodRequest.getAccount().getId() == 0)
+            return;
+
+        Account account = accountRepository.findByIdAndWorkspaceId(paymentMethodRequest.getAccount().getId(), paymentMethodRequest.getWorkspaceId());
         if(account == null) {
             throw new AccountNotFoundException("La cuenta asociada no ha sido encontrada");
         }
@@ -57,6 +65,15 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     }
 
     @Override
+    public List<PaymentMethod> findByAccountIdANdWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException {
+        Account account = accountRepository.findByIdAndWorkspaceId(accountId, workspaceId);
+        if(account == null) {
+            throw new AccountNotFoundException("La cuenta asociada no ha sido encontrada");
+        }
+        return paymentMethodRepository.findByAccountIdAndWorkspaceId(accountId, workspaceId);
+    }
+
+    @Override
     public PaymentMethod update(PaymentMethod paymentMethodRequest, Long paymentMethodId) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException {
 
         Optional<PaymentMethod> paymentMethodFounded = paymentMethodRepository.findById(paymentMethodId);
@@ -64,14 +81,16 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
             throw new ObjectNotFoundException("El medio de pago seleccionado no ha sido encontrado");
         }
 
-        if(!paymentMethodFounded.get().getName().equals(paymentMethodRequest.getName())) {
+        if(!paymentMethodFounded.get().getName().equalsIgnoreCase(paymentMethodRequest.getName())) {
             validateDuplicatedName(paymentMethodRequest);
         }
 
         validateAccountAssoc(paymentMethodRequest);
 
         PaymentMethod paymentMethodToUpdate = paymentMethodFounded.get();
-        paymentMethodToUpdate.setName(paymentMethodRequest.getName().toUpperCase());
+        paymentMethodToUpdate.setName(paymentMethodRequest.getName());
+        paymentMethodToUpdate.setIcon(paymentMethodRequest.getIcon());
+        paymentMethodToUpdate.setColor(paymentMethodRequest.getColor());
         paymentMethodToUpdate.setAccount(paymentMethodRequest.getAccount());
 
         return paymentMethodRepository.save(paymentMethodToUpdate);
@@ -96,7 +115,7 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     
     private void validateDuplicatedName(PaymentMethod paymentMethodRequest) throws ObjectExistsException {
 
-        PaymentMethod paymentMethodNameRepeated = paymentMethodRepository.findByNameAndWorkspaceId(paymentMethodRequest.getName().toUpperCase(), paymentMethodRequest.getAccount().getWorkspaceId());
+        PaymentMethod paymentMethodNameRepeated = paymentMethodRepository.findByNameAndWorkspaceId(paymentMethodRequest.getName(), paymentMethodRequest.getWorkspaceId());
         if(paymentMethodNameRepeated != null) {
             throw new ObjectExistsException("Ya existe un método de pago con el nombre que intentas registrar");
         }

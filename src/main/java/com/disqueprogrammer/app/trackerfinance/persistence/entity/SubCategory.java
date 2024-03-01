@@ -3,14 +3,13 @@ package com.disqueprogrammer.app.trackerfinance.persistence.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
+@ToString
 @Entity
 public class SubCategory {
     @Id
@@ -19,8 +18,14 @@ public class SubCategory {
 
     private String name;
 
+    private String color;
+
+    private String icon;
+
+    private boolean used;
+
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = true)
     private Category category;
 
     private boolean active;

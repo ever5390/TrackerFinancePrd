@@ -47,7 +47,7 @@ public class BudgetServiceImpl implements BudgetService{
         budgetRequest.setUsedAmount(usedAmount);
         budgetRequest.setStatusOpen(true);
 
-        return budgetRequest;
+        return budgetRepository.save(budgetRequest);
     }
 
     private static void validationBudgetLimitAmountAndDatesRanges(Budget budget) throws CustomException {

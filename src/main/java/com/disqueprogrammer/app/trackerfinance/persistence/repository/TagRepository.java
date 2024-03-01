@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface TagRepository extends JpaRepository<Tag, Long> {
 
-    Tag findByTagNameAndWorkspaceId(String tagName, Long workspaceId);
+    Tag findByNameAndWorkspaceId(String name, Long workspaceId);
 
     Tag findByIdAndWorkspaceId(Long Id , Long workspaceId);
 

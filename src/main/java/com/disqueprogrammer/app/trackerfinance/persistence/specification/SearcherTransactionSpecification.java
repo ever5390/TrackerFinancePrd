@@ -26,7 +26,7 @@ public class SearcherTransactionSpecification implements Specification<Transacti
     private LocalDateTime  endDate;
     private TypeEnum type;
     private StatusEnum status;
-    private String category;
+    private String subCategory;
     private String description;
     private String segment;
     private String account;
@@ -86,10 +86,10 @@ public class SearcherTransactionSpecification implements Specification<Transacti
         }
 
 
-        if(StringUtils.hasText(category)) {
-            Join<Transaction, Category> transactionCategoryJoin = root.join("category");
+        if(StringUtils.hasText(subCategory)) {
+            Join<Transaction, Category> transactionCategoryJoin = root.join("subCategory");
             Expression<String> categoryNameToLowerCase = criteriaBuilder.lower(transactionCategoryJoin.get("name"));
-            Predicate categoryPredicate = criteriaBuilder.like(categoryNameToLowerCase, "%".concat(category.toLowerCase()).concat("%"));
+            Predicate categoryPredicate = criteriaBuilder.like(categoryNameToLowerCase, "%".concat(subCategory.toLowerCase()).concat("%"));
             predicates.add(categoryPredicate);
         }
 

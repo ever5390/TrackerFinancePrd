@@ -12,14 +12,16 @@ import java.util.List;
 @Repository
 public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Long> {
 
-    @Query("select p from PaymentMethod p where p.name =:paymentMethodName and p.account.workspaceId=:workspaceId")
+    @Query("select p from PaymentMethod p where p.name =:paymentMethodName and p.workspaceId=:workspaceId")
     PaymentMethod findByNameAndWorkspaceId(String paymentMethodName, Long workspaceId);
 
-    @Query("select p from PaymentMethod p where p.id =:paymentMethodId and p.account.workspaceId=:workspaceId")
+    @Query("select p from PaymentMethod p where p.id =:paymentMethodId and p.workspaceId=:workspaceId")
     PaymentMethod findByIdAndWorkspaceId(Long paymentMethodId, Long workspaceId);
 
-    @Query("select p from PaymentMethod p where p.account.workspaceId=:workspaceId")
+    @Query("select p from PaymentMethod p where p.workspaceId=:workspaceId")
     List<PaymentMethod> findByWorkspaceId(Long workspaceId);
+
+    List<PaymentMethod> findByAccountIdAndWorkspaceId(Long accountId, Long workspaceId);
 
     @Modifying
     @Transactional

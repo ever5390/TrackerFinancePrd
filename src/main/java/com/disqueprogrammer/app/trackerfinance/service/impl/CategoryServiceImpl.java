@@ -27,8 +27,7 @@ public class CategoryServiceImpl implements ICategoryService {
     @Override
     public Category save(Category categoryRequest) throws CategoryExistsException {
         validateDuplicatedName(categoryRequest);
-
-        categoryRequest.setName(categoryRequest.getName().toUpperCase());
+        categoryRequest.setName(categoryRequest.getName());
         return categoryRepository.save(categoryRequest);
     }
 
@@ -59,7 +58,7 @@ public class CategoryServiceImpl implements ICategoryService {
             throw new CategoryNotFoundException("No se encontró la categoría que desea actualizar");
         }
 
-        if(!optionalCategory.get().getName().equals(categoryRequest.getName())) {
+        if(!optionalCategory.get().getName().equalsIgnoreCase(categoryRequest.getName())) {
             validateDuplicatedName(categoryRequest);
         }
 
@@ -83,7 +82,7 @@ public class CategoryServiceImpl implements ICategoryService {
 
     private void validateDuplicatedName(Category categoryRequest) throws CategoryExistsException {
 
-        Category categoryNameRepeated = categoryRepository.findByNameAndWorkspaceId(categoryRequest.getName().toUpperCase(), categoryRequest.getWorkspaceId());
+        Category categoryNameRepeated = categoryRepository.findByNameAndWorkspaceId(categoryRequest.getName(), categoryRequest.getWorkspaceId());
         if(categoryNameRepeated != null) {
             throw new CategoryExistsException("Ya existe una categoría con el nombre que intentas registrar");
         }

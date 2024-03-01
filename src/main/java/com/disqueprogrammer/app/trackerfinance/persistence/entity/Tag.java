@@ -1,13 +1,13 @@
 package com.disqueprogrammer.app.trackerfinance.persistence.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
+@ToString
 @Entity
 public class Tag {
 
@@ -15,7 +15,7 @@ public class Tag {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String tagName;
+    private String name;
 
     private Long workspaceId;
 
