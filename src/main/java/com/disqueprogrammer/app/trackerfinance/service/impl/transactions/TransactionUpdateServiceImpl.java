@@ -34,7 +34,6 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
 
     private final RecurringRepository recurringRepository;
 
-
     public TransactionUpdateServiceImpl(AccountRepository accountRepository, TransactionRepository transactionRepository, RecurringRepository recurringRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
@@ -50,15 +49,15 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
 
             if (!TypeEnum.TRANSFERENCE.equals(transactionFounded.getType())) {
                 reverseAndUpdateBalanceAvailableByUpdate(transactionRequest, transactionFounded);
-                //Update params only this case
-                transactionFounded.setSubCategory(transactionRequest.getSubCategory());
             }
 
             if(TypeEnum.TRANSFERENCE.equals(transactionFounded.getType())) {
                 reverseAndUpdateBalanceAvailableAccountsOriginAndDestinyByUpdateTx(transactionRequest, transactionFounded);
             }
 
-            if (TypeEnum.LOAN.equals(transactionFounded.getType())) {
+            if (TypeEnum.LOAN.equals(transactionFounded.getType())
+                    || (TypeEnum.EXPENSE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter())
+                    || (TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter()))  {
                 //Update remaining to LOAN
                 double newRemainingLoanAssoc = getNewRemainingByEditLoan(transactionRequest, transactionFounded);
                 if (newRemainingLoanAssoc == 0) transactionFounded.setStatus(StatusEnum.PAYED);
@@ -83,12 +82,14 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
             }
             
             //Only these data are updated
-            transactionFounded.setTags(!transactionRequest.getTags().isEmpty() ?transactionRequest.getTags():transactionFounded.getTags());
             transactionFounded.setAmount(transactionRequest.getAmount());
             transactionFounded.setCreateAt(transactionRequest.getCreateAt());
             transactionFounded.setDescription(transactionRequest.getDescription());
             transactionFounded.setRecurring(transactionRequest.getRecurring());
             transactionFounded.setTags(transactionRequest.getTags());
+            transactionFounded.setSubCategory(transactionRequest.getSubCategory());
+            transactionFounded.setCounterpart(transactionRequest.getCounterpart());
+            transactionFounded.setPaymentMethod(transactionRequest.getPaymentMethod());
 
             return transactionRepository.save(transactionFounded);
 

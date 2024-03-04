@@ -21,6 +21,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Transactional
@@ -52,15 +53,14 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Transaction save(Transaction transactionRequest) throws CustomException, AccountEqualsException, InsuficientFundsException, UnspecifiedCounterpartException {
+    public Transaction save(Transaction transactionRequest) throws CustomException, InsuficientFundsException, UnspecifiedCounterpartException, AccountEqualsException {
 
         settingDefaultParameters(transactionRequest);
         validationAmount(transactionRequest.getAmount());
         validCreateAt(transactionRequest.getCreateAt());
-        //transactionRequest.setResponsableUser((validateResponsableUser(transactionRequest.getResponsableUser())));
         transactionRequest.setSubCategory((validateCategory(transactionRequest)));
         transactionRequest.setAccount(validateOnlyAccount(transactionRequest.getAccount()));
-        transactionRequest.setAccountDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferAccount(transactionRequest.getAccount(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
+        transactionRequest.setAccountDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferAccount(transactionRequest.getAccountDestiny(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
         transactionRequest.setPaymentMethod((transactionRequest.getPaymentMethod() == null || transactionRequest.getPaymentMethod().getId() == 0)? null: validateonlyPaymentMethod(transactionRequest.getPaymentMethod()));
         transactionRequest.setPaymentMethodDestiny(!TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())?null:validateTransferPaymentMethod(transactionRequest.getPaymentMethodDestiny(), transactionRequest.getType(), "destino", transactionRequest.getWorkspaceId()));
         validateAccountBalanceAvailableForEnteredAmount(transactionRequest, transactionRequest.getAccount());
@@ -68,6 +68,13 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         if (TypeEnum.LOAN.equals(transactionRequest.getType())) {
             //Valid counterparty counterpart
             transactionRequest.setCounterpart(validCounterpartForLoanTransaction(transactionRequest));
+        }
+
+        if( TypeEnum.LOAN.equals(transactionRequest.getType())
+                || (TypeEnum.EXPENSE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter())
+                || (TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter()) ) {
+            transactionRequest.setStatus(StatusEnum.PENDING);
+            transactionRequest.setRemaining(transactionRequest.getAmount());
         }
 
         if (TypeEnum.PAYMENT.equals(transactionRequest.getType())) {
@@ -93,7 +100,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         if (TypeEnum.TRANSFERENCE.equals(transactionRequest.getType())) {
 
             Account accountOrigin = transactionRequest.getAccount();
-            Account accountDestiny = transactionRequest.getAccount();
+            Account accountDestiny = transactionRequest.getAccountDestiny();
 
             validationOfEqualsAccounts(accountOrigin, accountDestiny);
 
@@ -121,7 +128,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     private Account validateOnlyAccount(Account account) throws CustomException {
 
-        if(account == null || StringUtils.isEmpty(account.getId().toString())) {
+        if(account == null || account.getId()== 0) {
             throw new CustomException("Seleccione una cuenta.");
         }
 
@@ -138,7 +145,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
     }
 
     private void validationOfEqualsAccounts(Account accountOrigin, Account accountDestiny) throws AccountEqualsException {
-        if(accountOrigin.getId().equals(accountDestiny.getId())) {
+        if(Objects.equals(accountOrigin.getId(), accountDestiny.getId())) {
             throw new AccountEqualsException("Las cuentas origen y destino no pueden ser las mismas.");
         }
     }
@@ -231,21 +238,16 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             transactionRequest.setSubCategory(null);
         }
 
-        if (TypeEnum.LOAN.equals(transactionRequest.getType())) {
-            transactionRequest.setStatus(StatusEnum.PENDING);
-            transactionRequest.setRemaining(transactionRequest.getAmount());
-        }
-
-        //For all types other than Payment : loanAssoc = null
-        if (!TypeEnum.PAYMENT.equals(transactionRequest.getType())) {
-            transactionRequest.setTransactionLoanAssocToPay(null);
-        }
-
         //For all types other than LOAN
         if (!TypeEnum.LOAN.equals(transactionRequest.getType())) {
             transactionRequest.setStatus(StatusEnum.NOT_APPLICABLE);
             transactionRequest.setRemaining(0);
             transactionRequest.setCounterpart(null);
+        }
+
+        //For all types other than Payment : loanAssoc = null
+        if (!TypeEnum.PAYMENT.equals(transactionRequest.getType())) {
+            transactionRequest.setTransactionLoanAssocToPay(null);
         }
 
         //Updating action tx
@@ -258,7 +260,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
 
         if(transactionRequest.getType().equals(TypeEnum.PAYMENT) || transactionRequest.getType().equals(TypeEnum.LOAN)) {
-            if(transactionRequest.getAction() == null) throw new CustomException("Por favor seleccione la acción para poder procesar la operación");
+            if(transactionRequest.getAction() == null) throw new CustomException("Se produjo un error al procesar el tipo de opreación, por favor inténtelo nuevamente.");
         }
 
         //Updating Block tx : IN - OUT
@@ -290,10 +292,13 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     private Transaction updateLoanAssocFromPaymentToSave(Transaction transactionRequest) throws CustomException {
 
+            if (transactionRequest.getTransactionLoanAssocToPay() == null || transactionRequest.getTransactionLoanAssocToPay().getId() == 0)
+                throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
+
             Long idTransactionLoanAssoc = transactionRequest.getTransactionLoanAssocToPay().getId();
-            if (idTransactionLoanAssoc == null) throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
             Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
-            if(transactionLoanAssoc == null) new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
+            if(transactionLoanAssoc == null)
+                throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
 
             if(!transactionLoanAssoc.getType().equals(TypeEnum.LOAN)) {
                 throw new CustomException("La transacción seleccionada como préstamo no es correcto, seleccione otro.");

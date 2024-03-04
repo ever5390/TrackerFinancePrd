@@ -31,6 +31,8 @@ public class Transaction {
     //@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS")
     private LocalDateTime createAt;
 
+    private LocalDateTime paymentDate;
+
     @Enumerated(EnumType.STRING)
     private TypeEnum type;
 

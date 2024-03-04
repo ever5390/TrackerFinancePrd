@@ -33,7 +33,6 @@ public class TransactionController {
 
     private final static Logger LOG = LoggerFactory.getLogger(TransactionController.class);
 
-
     private final ITransactionGetService transactionGetService;
 
     private final ITransactionSaveService transactionSaveService;
@@ -47,9 +46,7 @@ public class TransactionController {
     private final WorkspaceService workspaceService;
 
     @PostMapping
-    public ResponseEntity<Transaction> save(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction transactionRequest) throws UnspecifiedCounterpartException, AccountEqualsException, CustomException, InsuficientFundsException {
-        LOG.info("inicio transacción");
-
+    public ResponseEntity<Transaction> save(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction transactionRequest) throws UnspecifiedCounterpartException, CustomException, InsuficientFundsException, AccountEqualsException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         transactionRequest.setWorkspaceId(workspaceId);
         transactionRequest.setResponsableUser(workspaceService.getUserAuhenticated());
@@ -57,12 +54,14 @@ public class TransactionController {
     }
 
     @PostMapping("/recurring")
-    public ResponseEntity<String> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
+    public ResponseEntity<Void> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         nextTransactionRecurring.setWorkspaceId(workspaceId);
         nextTransactionRecurring.setResponsableUser(workspaceService.getUserAuhenticated());
         transactionSaveService.saveNewTransactionRecurring(nextTransactionRecurring);
-        return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+
+       // return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -81,10 +80,10 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction) throws CustomException, InsuficientFundsException {
+    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction) throws CustomException, InsuficientFundsException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         transactionDeleteService.delete(idTransaction, workspaceId);
-        return new ResponseEntity<>("Transaction was deleted successfully!!", HttpStatus.OK);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/{id}")
@@ -106,13 +105,14 @@ public class TransactionController {
             @RequestParam(required = false) String account,
             @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) BlockEnum block,
-            @RequestParam(required = false) ActionEnum action
+            @RequestParam(required = false) ActionEnum action,
+            @RequestParam(required = false) String user
     ) throws Exception {
 
         workspaceService.validationWorkspaceUserRelationship(WorkspaceIdParam);
 
         ResumeMovementDto resumeMovementDto = transactionFiltersService.findMovementsByFilters(WorkspaceIdParam, startDate,
-                endDate, type, status, category, description, segment, account, paymentMethod, block, action);
+                endDate, type, status, category, description, segment, account, paymentMethod, block, action, user);
         return new ResponseEntity<>(resumeMovementDto, HttpStatus.OK);
 
     }
@@ -129,10 +129,9 @@ public class TransactionController {
         return new ResponseEntity<List<Transaction>>(transactionGetService.findAllTxByWorkspaceId(workspaceId), HttpStatus.OK);
     }
 
-
     @GetMapping("/loans-pending")
-    public ResponseEntity<List<Transaction>> findByTypeAndStatusAndWorkspaceId(@PathVariable("workspaceId") Long workspaceId, @RequestParam TypeEnum type, @RequestParam StatusEnum status) throws Exception {
-        return new ResponseEntity<>(transactionGetService.findByTypeAndStatusAndWorkspaceId(type, status, workspaceId), HttpStatus.OK);
+    public ResponseEntity<List<Transaction>> findByStatusAndWorkspaceId(@PathVariable("workspaceId") Long workspaceId, @RequestParam StatusEnum status) throws Exception {
+        return new ResponseEntity<>(transactionGetService.findByStatusAndWorkspaceId(status, workspaceId), HttpStatus.OK);
     }
 
 }

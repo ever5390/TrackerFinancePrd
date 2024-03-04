@@ -11,5 +11,5 @@ import java.util.List;
 
 public interface ITransactionFiltersService {
 
-    ResumeMovementDto findMovementsByFilters(Long workspaceId, String startDate, String endDate, TypeEnum type, StatusEnum status, String category, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action) throws Exception;
+    ResumeMovementDto findMovementsByFilters(Long workspaceId, String startDate, String endDate, TypeEnum type, StatusEnum status, String category, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action, String responsableUser) throws Exception;
 }

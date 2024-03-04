@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 @Service
 public class CounterpartServiceImpl implements ICounterpartService {
 
-    private final static Logger LOG = LoggerFactory.getLogger(AccountServiceImpl.class);
+    private final static Logger LOG = LoggerFactory.getLogger(CounterpartServiceImpl.class);
 
     private final CounterpartRepository counterpartRepository;
 

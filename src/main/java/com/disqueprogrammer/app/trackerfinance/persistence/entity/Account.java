@@ -28,6 +28,8 @@ public class Account {
 
     private String color;
 
+    private boolean fixedParameter;
+
     private double beginBalance;
 
     private double currentBalance;
@@ -38,6 +40,9 @@ public class Account {
     @JsonIgnoreProperties("account")
     @JsonProperty("paymentMethods")
     private List<PaymentMethod> paymentMethods;
+
+    @ManyToOne
+    private CardType cardType;
 
     private Long workspaceId;
 }

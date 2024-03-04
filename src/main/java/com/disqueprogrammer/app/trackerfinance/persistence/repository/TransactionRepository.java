@@ -41,4 +41,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
    // @Query("Select t from Transaction t where workspaceId =:workspaceId and between t.createAt = :beginDate and t.createAt =:endDate")
     List<Transaction> findByWorkspaceIdAndCreateAtBetweenAndSubCategoryInAndBlock(Long workspaceId, LocalDateTime beginDate, LocalDateTime endDate, List<SubCategory> subCategories, BlockEnum block);
 
+    List<Transaction> findByStatusAndWorkspaceId(StatusEnum status, Long workspaceId);
 }

@@ -35,8 +35,8 @@ public class WorkspaceController {
     }
 
     @DeleteMapping("/{workspaceId}")
-    public  ResponseEntity<String> deleteById(@PathVariable("userParentId") Long userParentId, @PathVariable("workspaceId") Long workspaceId) throws CustomException {
+    public  ResponseEntity<Void> deleteById(@PathVariable("userParentId") Long userParentId, @PathVariable("workspaceId") Long workspaceId) throws CustomException {
         workspaceService.deleteById(userParentId, workspaceId);
-        return new ResponseEntity<>("Workspace was deleted successfully!!", HttpStatus.OK);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
     }
 }

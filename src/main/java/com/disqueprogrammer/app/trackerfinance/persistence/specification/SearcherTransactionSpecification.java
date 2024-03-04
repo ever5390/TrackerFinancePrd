@@ -5,6 +5,7 @@ import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEn
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
+import com.disqueprogrammer.app.trackerfinance.security.persistence.User;
 import jakarta.persistence.criteria.*;
 import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
@@ -28,12 +29,11 @@ public class SearcherTransactionSpecification implements Specification<Transacti
     private StatusEnum status;
     private String subCategory;
     private String description;
-    private String segment;
     private String account;
     private String paymentMethod;
     private BlockEnum block;
     private ActionEnum action;
-
+    private String responsableUser;
 
     @Override
     public Predicate toPredicate(Root<Transaction> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
@@ -85,22 +85,12 @@ public class SearcherTransactionSpecification implements Specification<Transacti
             predicates.add(descriptionLikePredicate);
         }
 
-
         if(StringUtils.hasText(subCategory)) {
             Join<Transaction, Category> transactionCategoryJoin = root.join("subCategory");
             Expression<String> categoryNameToLowerCase = criteriaBuilder.lower(transactionCategoryJoin.get("name"));
             Predicate categoryPredicate = criteriaBuilder.like(categoryNameToLowerCase, "%".concat(subCategory.toLowerCase()).concat("%"));
             predicates.add(categoryPredicate);
         }
-
-/*
-        if(StringUtils.hasText(segment)) {
-            Join<Transaction, Segment> transactionSegmentJoin = root.join("segment");
-            Expression<String> segmentNameToLowerCase = criteriaBuilder.lower(transactionSegmentJoin.get("name"));
-            Predicate segmentPredicate = criteriaBuilder.like(segmentNameToLowerCase, "%".concat(segment.toLowerCase()).concat("%"));
-            predicates.add(segmentPredicate);
-        }
-*/
 
         if (StringUtils.hasText(paymentMethod)) {
             Join<Transaction, PaymentMethod> transactionPaymentMethodJoin = root.join("paymentMethod", JoinType.LEFT);
@@ -113,16 +103,24 @@ public class SearcherTransactionSpecification implements Specification<Transacti
         }
 
         if (StringUtils.hasText(account)) {
-            Join<Transaction, PaymentMethod> transactionPaymentMethodJoin = root.join("paymentMethod", JoinType.LEFT);
-            Join<Transaction, PaymentMethod> transactionPaymentMethodDestinyJoin = root.join("paymentMethodDestiny", JoinType.LEFT);
-            Join<PaymentMethod, Account> paymentMethodAccountJoin = transactionPaymentMethodJoin.join("account", JoinType.LEFT);
-            Join<PaymentMethod, Account> paymentMethodAccountDestinyJoin = transactionPaymentMethodDestinyJoin.join("account", JoinType.LEFT);
-            Predicate accountPredicate = criteriaBuilder.or(
-                    criteriaBuilder.equal(criteriaBuilder.lower(paymentMethodAccountJoin.get("name")), account.toLowerCase()),
-                    criteriaBuilder.equal(criteriaBuilder.lower(paymentMethodAccountDestinyJoin.get("name")), account.toLowerCase())
+            Join<Transaction, CardType> transactionCardTypeJoin = root.join("account", JoinType.LEFT);
+            Join<Transaction, CardType> transactionCardTypeDestinyJoin = root.join("accountDestiny", JoinType.LEFT);
+            Predicate paymentPredicate = criteriaBuilder.or(
+                    criteriaBuilder.equal(criteriaBuilder.lower(transactionCardTypeJoin.get("name")), account.toLowerCase()),
+                    criteriaBuilder.equal(criteriaBuilder.lower(transactionCardTypeDestinyJoin.get("name")), account.toLowerCase())
             );
-            predicates.add(accountPredicate);
+            predicates.add(paymentPredicate);
         }
+
+        if (StringUtils.hasText(responsableUser)) {
+            Join<Transaction, User> transactionResposableUser = root.join("user", JoinType.LEFT);
+            Predicate paymentPredicate = criteriaBuilder.or(
+                    criteriaBuilder.equal(criteriaBuilder.lower(transactionResposableUser.get("firstname")), responsableUser.toLowerCase())
+            );
+            predicates.add(paymentPredicate);
+        }
+
+
 
         query.orderBy(criteriaBuilder.desc(root.get("createAt")));
 

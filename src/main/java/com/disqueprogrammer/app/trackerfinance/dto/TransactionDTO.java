@@ -23,11 +23,11 @@ public class TransactionDTO {
 
     private TypeEnum type;
 
-    private Account account;
+    private CardType account;
 
     private PaymentMethod paymentMethod;
 
-    private Account accountDestiny;
+    private CardType accountDestiny;
 
     private PaymentMethod paymentMethodDestiny;
 

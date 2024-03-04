@@ -36,7 +36,7 @@ public class AccountController extends ExceptionHandling {
     }
 
     @PostMapping
-    public ResponseEntity<Account> save(@PathVariable("workspaceId") Long workspaceId, @Valid @RequestBody Account accountReq) throws NotAllowedAccountBalanceException, NotNumericException, AccountNotFoundException, AccountExistsException, CustomException {
+    public ResponseEntity<Account> save(@PathVariable("workspaceId") Long workspaceId, @Valid @RequestBody Account accountReq) throws NotAllowedAccountBalanceException, NotNumericException, AccountNotFoundException, AccountExistsException, CustomException, AccountExistsException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         accountReq.setWorkspaceId(workspaceId);
         return new ResponseEntity<>(accountService.save(accountReq), HttpStatus.CREATED);
@@ -50,10 +50,10 @@ public class AccountController extends ExceptionHandling {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws CustomException, AccountNotFoundException {
+    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws CustomException, AccountNotFoundException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         accountService.delete(idAccount, workspaceId);
-        return new ResponseEntity<>("Account was deleted successfully!!", HttpStatus.OK);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/{id}")

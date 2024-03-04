@@ -18,7 +18,7 @@ import java.util.Optional;
 @Service
 public class CategoryServiceImpl implements ICategoryService {
 
-    private final static Logger LOG = LoggerFactory.getLogger(AccountServiceImpl.class);
+    private final static Logger LOG = LoggerFactory.getLogger(CategoryServiceImpl.class);
 
     private final CategoryRepository categoryRepository;
 

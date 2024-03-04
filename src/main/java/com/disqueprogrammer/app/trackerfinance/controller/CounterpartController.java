@@ -40,10 +40,10 @@ public class CounterpartController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCounterpart) throws ObjectExistsException, ObjectNotFoundException, CustomException {
+    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCounterpart) throws ObjectExistsException, ObjectNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         counterpartService.delete(idCounterpart, workspaceId);
-        return new ResponseEntity<>("Counterpart was deleted successfully!!", HttpStatus.OK);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping

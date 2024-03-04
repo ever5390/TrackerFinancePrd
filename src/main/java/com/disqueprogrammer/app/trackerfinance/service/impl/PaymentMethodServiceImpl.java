@@ -65,7 +65,7 @@ public class PaymentMethodServiceImpl implements IPaymentMethodService {
     }
 
     @Override
-    public List<PaymentMethod> findByAccountIdANdWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException {
+    public List<PaymentMethod> findByAccountIdAndWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException {
         Account account = accountRepository.findByIdAndWorkspaceId(accountId, workspaceId);
         if(account == null) {
             throw new AccountNotFoundException("La cuenta asociada no ha sido encontrada");

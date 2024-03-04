@@ -14,7 +14,7 @@ public interface IPaymentMethodService {
     PaymentMethod findByIdAndWorkspaceId(Long paymentMethodId, Long workspaceId) throws ObjectNotFoundException;
     List<PaymentMethod> findByWorkspaceId(Long workspaceId);
 
-    List<PaymentMethod> findByAccountIdANdWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException;
+    List<PaymentMethod> findByAccountIdAndWorkspaceId(Long accountId, Long workspaceId) throws AccountNotFoundException;
 
     PaymentMethod update(PaymentMethod paymentMethod, Long idPaymentMethod) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException;
 

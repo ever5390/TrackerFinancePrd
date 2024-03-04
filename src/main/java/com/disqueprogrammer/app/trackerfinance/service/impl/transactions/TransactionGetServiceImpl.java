@@ -4,7 +4,6 @@ import com.disqueprogrammer.app.trackerfinance.dto.MovementDto;
 import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
-import com.disqueprogrammer.app.trackerfinance.exception.generic.ObjectNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
@@ -15,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,21 +107,19 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
             movementDto.setPaymentMethod(transactions.get(i).getPaymentMethod().getName());
             movementDto.setCreateAt(transactions.get(i).getCreateAt());
             movementDto.setType(transactions.get(i).getType());
-           // movementDto.setIdTransactionAssoc(transactions.get(i).getIdLoanAssoc());
             movementsDto.add(movementDto);
         }
 
-        resumeMovementDto.setTotalNumberElements(transactions.size());
         resumeMovementDto.setTotalIN(totalIN);
         resumeMovementDto.setTotalOUT(totalOUT);
-        resumeMovementDto.setMovememts(movementsDto);
+        resumeMovementDto.setMovememts(transactions);
 
         return resumeMovementDto;
     }
 
     @Override
-    public List<Transaction> findByTypeAndStatusAndWorkspaceId(TypeEnum type, StatusEnum status, Long workspaceId) {
-        return this.transactionRepository.findByTypeAndStatusAndWorkspaceId(type, status, workspaceId);
+    public List<Transaction> findByStatusAndWorkspaceId(StatusEnum status, Long workspaceId) {
+        return this.transactionRepository.findByStatusAndWorkspaceId(status, workspaceId);
     }
 
     @Override

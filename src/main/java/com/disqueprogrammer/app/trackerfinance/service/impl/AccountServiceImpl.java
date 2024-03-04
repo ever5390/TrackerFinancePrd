@@ -3,6 +3,7 @@ package com.disqueprogrammer.app.trackerfinance.service.impl;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.NewBalanceLessThanCurrentBalanceException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Account;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.CardType;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.PaymentMethod;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountExistsException;
@@ -10,6 +11,7 @@ import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountNotFoundE
 import com.disqueprogrammer.app.trackerfinance.exception.domain.NotAllowedAccountBalanceException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.NotNumericException;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.AccountRepository;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.CardTypeRepository;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.PaymentMethodRepository;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.TransactionRepository;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.IAccountService;
@@ -29,6 +31,7 @@ public class AccountServiceImpl implements IAccountService {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(AccountServiceImpl.class);
 
+    private final CardTypeRepository cardTypeRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentMethodRepository paymentRepository;
@@ -37,6 +40,7 @@ public class AccountServiceImpl implements IAccountService {
     public Account save(Account accountRequest) throws NotAllowedAccountBalanceException, AccountNotFoundException, AccountExistsException, NotNumericException, CustomException {
         validateBalance(accountRequest);
         validateDuplicatedName(accountRequest);
+        validateCardType(accountRequest.getCardType(), accountRequest.getWorkspaceId());
         accountRequest.setIcon(accountRequest.getIcon());
         accountRequest.setColor(accountRequest.getColor());
         accountRequest.setActive(true);
@@ -69,6 +73,12 @@ public class AccountServiceImpl implements IAccountService {
         }
     }
 
+    private void validateCardType(CardType cardTypeReq, Long workspaceId) throws CustomException{
+        CardType cardTypeFound = cardTypeRepository.findByIdAndWorkspaceId(cardTypeReq.getId(), workspaceId);
+        if(cardTypeFound == null )
+            throw new CustomException("El tipo de tarjeta asociado " + cardTypeReq.getName() + " no ha sido encontrado");
+    }
+
     private void validateDuplicatedName(Account accountRequest) throws AccountExistsException, NotAllowedAccountBalanceException, AccountNotFoundException, CustomException {
 
         if(StringUtils.isEmpty(accountRequest.getName())) throw new CustomException("Ingrese un nombre para su cuenta por favor.");
@@ -97,7 +107,9 @@ public class AccountServiceImpl implements IAccountService {
     public Account update(Account accountRequest, Long idAccount) throws AccountNotFoundException, NotAllowedAccountBalanceException, AccountExistsException, NotNumericException, NewBalanceLessThanCurrentBalanceException, CustomException {
 
         Account accountFounded = accountRepository.findById(idAccount).orElseThrow(() -> new AccountNotFoundException("No se encontró la cuenta que intentas actualizar"));
+
         validateBalanceUpdate(accountRequest, accountFounded);
+        validateCardType(accountRequest.getCardType(), accountRequest.getWorkspaceId());
         setterPaymentMethodIfExist(accountRequest, accountFounded);
         if(!accountFounded.getName().equalsIgnoreCase(accountRequest.getName()))
             validateDuplicatedName(accountRequest);
@@ -107,7 +119,7 @@ public class AccountServiceImpl implements IAccountService {
         accountFounded.setActive(accountRequest.isActive());
         accountFounded.setIcon(accountRequest.getIcon());
         accountFounded.setColor(accountRequest.getColor());
-        accountFounded.setName(accountRequest.getName());
+        accountFounded.setName((accountFounded.isFixedParameter())?accountFounded.getName():accountRequest.getName());
         accountFounded.setCurrentBalance(accountRequest.getCurrentBalance());
         return accountRepository.save(accountFounded);
     }
@@ -117,6 +129,8 @@ public class AccountServiceImpl implements IAccountService {
 
         Account accountFounded = accountRepository.findByIdAndWorkspaceId(accountId, workspaceId);
         if(accountFounded == null ) throw new AccountNotFoundException("No se encontró la cuenta que intentas eliminar");
+
+        if(accountFounded.isFixedParameter() ) throw new CustomException("La cuenta inicial no puede ser borrada.");
 
         validateIfExistTransactionsAssocThisAccount(accountFounded.getId(), workspaceId);
 

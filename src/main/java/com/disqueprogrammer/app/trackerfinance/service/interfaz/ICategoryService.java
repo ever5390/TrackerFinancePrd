@@ -13,7 +13,7 @@ public interface ICategoryService {
     Category findByIdAndWorkspaceId(Long categoryId, Long workspaceId) throws CategoryNotFoundException;
     List<Category> findByWorkspaceId(Long workspaceId);
 
-    Category update(Category category, Long idAccount) throws CategoryExistsException, CategoryNotFoundException;
+    Category update(Category category, Long idCardType) throws CategoryExistsException, CategoryNotFoundException;
 
     void delete(Long categoryId, Long workspaceId) throws CategoryNotFoundException;
 }

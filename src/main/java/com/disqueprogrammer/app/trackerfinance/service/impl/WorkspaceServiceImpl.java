@@ -1,5 +1,9 @@
 package com.disqueprogrammer.app.trackerfinance.service.impl;
 
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.Account;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.CardType;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.AccountRepository;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.CardTypeRepository;
 import com.disqueprogrammer.app.trackerfinance.security.Exceptions.domain.UserNotFoundException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Workspace;
@@ -24,11 +28,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     private final UserRepository userRepository;
 
+    private final AccountRepository accountRepository;
+
+    private final CardTypeRepository cardTypeRepository;
+
     private final AuthService authService;
 
-    public WorkspaceServiceImpl(WorkspaceRepository workspaceRepository, UserRepository userRepository, AuthService authService) {
+    public WorkspaceServiceImpl(WorkspaceRepository workspaceRepository, UserRepository userRepository, AccountRepository accountRepository, CardTypeRepository cardTypeRepository, AuthService authService) {
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
+        this.cardTypeRepository = cardTypeRepository;
         this.authService = authService;
     }
 
@@ -67,7 +77,22 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspaceReq.setOwner(userParent);
         workspaceReq.getUsers().add(userParent);
 
-        return workspaceRepository.save(workspaceReq);
+        Workspace workspaceSaved = workspaceRepository.save(workspaceReq);
+
+        Account accountBegin = new Account();
+        accountBegin.setName("EFECTIVO");
+        accountBegin.setWorkspaceId(workspaceSaved.getId());
+//        accountBegin.setPaymentMethods(null);
+//        accountBegin.setCardType(null);
+        accountRepository.save(accountBegin);
+
+        CardType cardTypeBegin = new CardType();
+        cardTypeBegin.setName("CREDITO");
+        cardTypeBegin.setFixedParameter(true);
+        cardTypeBegin.setWorkspaceId(workspaceSaved.getId());
+        cardTypeRepository.save(cardTypeBegin);
+
+        return workspaceSaved;
     }
 
     @Override

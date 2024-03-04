@@ -46,7 +46,10 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
             reverseAndUpdateBalanceAvailableAccountOriginAndDestinyByDeleteTx(transactionFounded);
         }
 
-        if (TypeEnum.LOAN.equals(transactionFounded.getType())) {
+        if (TypeEnum.LOAN.equals(transactionFounded.getType())
+                || (TypeEnum.EXPENSE.equals(transactionFounded.getType()) && transactionFounded.getAccount().getCardType().isFixedParameter())
+                || (TypeEnum.TRANSFERENCE.equals(transactionFounded.getType()) && transactionFounded.getAccount().getCardType().isFixedParameter())) {
+
             //Searching for transactions Payment type associated with this operation
             List<Transaction> paymentTransaction = transactionRepository.findPaymentsByLoanIdAssocAndWorkspaceId(transactionRequestId, transactionFounded.getWorkspaceId());
             if(!paymentTransaction.isEmpty())  throw new CustomException("No es posible eliminar la transacción de tipo PRÉSTAMO ya que se encontraron pagos asociados a ella.");
@@ -64,8 +67,8 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
     }
 
     private void reverseAndUpdateBalanceAvailableAccountOriginAndDestinyByDeleteTx(Transaction transactionFounded) throws InsuficientFundsException {
-        Account accountOrigin = transactionFounded.getPaymentMethod().getAccount();
-        Account accountDestiny = transactionFounded.getPaymentMethodDestiny().getAccount();
+        Account accountOrigin = transactionFounded.getAccount();
+        Account accountDestiny = transactionFounded.getAccount();
 
         double amountOriginAccount = accountOrigin.getCurrentBalance();
         double amountDestinyAccount = accountDestiny.getCurrentBalance();
@@ -88,7 +91,7 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
 
     private void reverseAndUpDateBalanceAvailableAccountByDeleteTx(Transaction transactionFounded) throws InsuficientFundsException {
         //Setting a new available amount in the account
-        Long idAccount = transactionFounded.getPaymentMethod().getAccount().getId();
+        Long idAccount = transactionFounded.getAccount().getId();
         Account account = accountRepository.getReferenceById(idAccount);
         double newBalance = getNewBalanceAccountReverseByDeleteTx(transactionFounded, account);
         account.setCurrentBalance(newBalance);

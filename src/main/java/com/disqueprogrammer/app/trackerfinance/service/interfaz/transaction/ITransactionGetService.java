@@ -16,7 +16,7 @@ public interface ITransactionGetService {
 
     public ResumeMovementDto findByWorkspaceId(Long workspaceId) throws Exception;
 
-    List<Transaction> findByTypeAndStatusAndWorkspaceId(TypeEnum type, StatusEnum status, Long workspaceId);
+    List<Transaction> findByStatusAndWorkspaceId(StatusEnum status, Long workspaceId);
 
     List<Transaction> findAllTxByWorkspaceId(Long workspaceId);
 }

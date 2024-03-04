@@ -29,24 +29,24 @@ public class PaymentMethodController extends ExceptionHandling {
     private final WorkspaceService workspaceService;
 
     @PostMapping
-    public ResponseEntity<PaymentMethod> save(@PathVariable("workspaceId") Long workspaceId, @Valid  @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+    public ResponseEntity<PaymentMethod> save(@PathVariable("workspaceId") Long workspaceId, @Valid  @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException, AccountNotFoundException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         paymentMethodReq.setWorkspaceId(workspaceId);
         return new ResponseEntity<>(paymentMethodService.save(paymentMethodReq), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PaymentMethod> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException {
+    public ResponseEntity<PaymentMethod> update(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod, @Valid @RequestBody PaymentMethod paymentMethodReq) throws ObjectExistsException, ObjectNotFoundException, AccountNotFoundException, CustomException, AccountNotFoundException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         paymentMethodReq.setWorkspaceId(workspaceId);
         return new ResponseEntity<>(paymentMethodService.update(paymentMethodReq, idPaymentMethod), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
+    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         paymentMethodService.delete(idPaymentMethod, workspaceId);
-        return new ResponseEntity<>("PaymentMethod was deleted successfully!!", HttpStatus.OK);
+        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping
@@ -58,7 +58,7 @@ public class PaymentMethodController extends ExceptionHandling {
     @GetMapping("/account/{id}")
     public ResponseEntity<List<PaymentMethod>> findByAccountId(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws ObjectNotFoundException, CustomException, AccountNotFoundException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
-        return new ResponseEntity<>(paymentMethodService.findByAccountIdANdWorkspaceId(idAccount, workspaceId), HttpStatus.OK);
+        return new ResponseEntity<>(paymentMethodService.findByAccountIdAndWorkspaceId(idAccount, workspaceId), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
