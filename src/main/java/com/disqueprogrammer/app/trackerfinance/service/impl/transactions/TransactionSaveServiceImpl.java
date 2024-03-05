@@ -265,7 +265,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
 
         if(transactionRequest.getType().equals(TypeEnum.PAYMENT) || transactionRequest.getType().equals(TypeEnum.LOAN)) {
-            if(transactionRequest.getAction() == null) throw new CustomException("Se produjo un error al procesar el tipo de opreación, por favor inténtelo nuevamente.");
+            if(transactionRequest.getAction() == null) throw new CustomException("Se produjo un error al procesar el tipo de operación, por favor inténtelo nuevamente.");
         }
 
         //Updating Block tx : IN - OUT
