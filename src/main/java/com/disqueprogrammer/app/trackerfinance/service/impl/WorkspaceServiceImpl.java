@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
@@ -82,6 +83,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         Account accountBegin = new Account();
         accountBegin.setName("EFECTIVO");
         accountBegin.setWorkspaceId(workspaceSaved.getId());
+        accountBegin.setCurrentBalance(BigDecimal.ONE);
+        accountBegin.setBeginBalance(BigDecimal.ONE);
+        accountBegin.setActive(true);
 //        accountBegin.setPaymentMethods(null);
 //        accountBegin.setCardType(null);
         accountRepository.save(accountBegin);

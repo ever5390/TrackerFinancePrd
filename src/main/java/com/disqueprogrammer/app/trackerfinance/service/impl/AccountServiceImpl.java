@@ -16,6 +16,7 @@ import com.disqueprogrammer.app.trackerfinance.persistence.repository.PaymentMet
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.TransactionRepository;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.IAccountService;
 import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -43,7 +44,9 @@ public class AccountServiceImpl implements IAccountService {
         validateCardType(accountRequest.getCardType(), accountRequest.getWorkspaceId());
         accountRequest.setIcon(accountRequest.getIcon());
         accountRequest.setColor(accountRequest.getColor());
+        accountRequest.setCardType(accountRequest.getCardType());
         accountRequest.setActive(true);
+        accountRequest.setFixedParameter(false);
         Account accountSaved = accountRepository.save(accountRequest);
         setterPaymentMethodIfExist(accountRequest, accountSaved);
 
@@ -74,6 +77,9 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     private void validateCardType(CardType cardTypeReq, Long workspaceId) throws CustomException{
+        if(cardTypeReq == null)
+            throw new CustomException("Seleccione un tipo de tarjeta por favor.");
+
         CardType cardTypeFound = cardTypeRepository.findByIdAndWorkspaceId(cardTypeReq.getId(), workspaceId);
         if(cardTypeFound == null )
             throw new CustomException("El tipo de tarjeta asociado " + cardTypeReq.getName() + " no ha sido encontrado");
@@ -88,7 +94,9 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     private void validateBalance(Account accountRequest) throws NotNumericException, NotAllowedAccountBalanceException {
-        if(accountRequest.getCurrentBalance() <= 0) throw new NotAllowedAccountBalanceException("La cuenta debe tener un monto asignado mayor a 0");
+        BigDecimal zero = BigDecimal.ZERO;
+        int comparisonResult = accountRequest.getCurrentBalance().compareTo(zero);
+        if(comparisonResult <= 0) throw new NotAllowedAccountBalanceException("La cuenta debe tener un monto asignado mayor a 0");
     }
 
     @Override
@@ -108,9 +116,10 @@ public class AccountServiceImpl implements IAccountService {
 
         Account accountFounded = accountRepository.findById(idAccount).orElseThrow(() -> new AccountNotFoundException("No se encontró la cuenta que intentas actualizar"));
 
-        validateBalanceUpdate(accountRequest, accountFounded);
+        validateBalanceUpdate(accountRequest);
         validateCardType(accountRequest.getCardType(), accountRequest.getWorkspaceId());
         setterPaymentMethodIfExist(accountRequest, accountFounded);
+        accountRequest.setFixedParameter(false);
         if(!accountFounded.getName().equalsIgnoreCase(accountRequest.getName()))
             validateDuplicatedName(accountRequest);
 
@@ -147,14 +156,13 @@ public class AccountServiceImpl implements IAccountService {
         }
     }
 
-    private void validateBalanceUpdate(Account accountRequest, Account accountFounded) throws NotAllowedAccountBalanceException, NewBalanceLessThanCurrentBalanceException {
+    private void validateBalanceUpdate(Account accountRequest) throws NotAllowedAccountBalanceException {
 
-        if(accountRequest.getCurrentBalance() <= 0) {
+        BigDecimal zero = BigDecimal.ZERO;
+        int comparisonResult = accountRequest.getCurrentBalance().compareTo(zero);
+        if(comparisonResult <= 0) {
             throw new NotAllowedAccountBalanceException("La cuenta debe tener un monto asignado mayor a 0");
         }
 
-//        if (accountRequest.getCurrentBalance() < accountFounded.getCurrentBalance()) {
-//            throw new NewBalanceLessThanCurrentBalanceException("El balance de la cuenta a editar es menor al actual, agregue un monto mayor.");
-//        }
     }
 }

@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,8 +47,8 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
 
         List<Transaction> transactions = transactionRepository.findByWorkspaceId(workspaceId);
 
-        double totalIN = 0.0;
-        double totalOUT = 0.0;
+        BigDecimal totalIN = BigDecimal.ZERO;
+        BigDecimal totalOUT = BigDecimal.ZERO;
 
         for (int i = 0; i < transactions.size(); i++) {
 
@@ -56,7 +57,7 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
 
             String reason = "";
             BlockEnum blockIN_OUT = transactions.get(i).getBlock();
-            double amountMov = transactions.get(i).getAmount();
+            BigDecimal amountMov = transactions.get(i).getAmount();
             String amountMovSave = amountMov + "";
 
             if(!TypeEnum.EXPENSE.equals(transactions.get(i).getType()) && !TypeEnum.INCOME.equals(transactions.get(i).getType())) {
@@ -64,12 +65,12 @@ public class TransactionGetServiceImpl implements ITransactionGetService {
             }
 
             if(blockIN_OUT.equals(BlockEnum.IN)){
-                totalIN+= amountMov;
+                totalIN = totalIN.add(amountMov);
                 amountMovSave = "+"+ amountMovSave;
             }
 
             if(blockIN_OUT.equals(BlockEnum.OUT)){
-                totalOUT+= amountMov;
+                totalOUT = totalOUT.add(amountMov);
                 amountMovSave = "-"+ amountMovSave;
             }
 

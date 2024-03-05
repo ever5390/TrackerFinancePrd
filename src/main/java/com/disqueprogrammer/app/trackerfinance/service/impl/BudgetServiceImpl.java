@@ -9,6 +9,7 @@ import com.disqueprogrammer.app.trackerfinance.persistence.repository.Transactio
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.BudgetService;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -35,9 +36,9 @@ public class BudgetServiceImpl implements BudgetService{
         List<Transaction> transactionsFounded = transactionRepository.findByWorkspaceIdAndCreateAtBetweenAndSubCategoryInAndBlock(budgetRequest.getWorkspaceId(), budgetRequest.getDateBegin(), budgetRequest.getDateEnd(), budgetRequest.getSubCategories(), BlockEnum.OUT);
         budgetRequest.setTransactions(transactionsFounded);
 
-        double usedAmount = 0.0;
+        BigDecimal usedAmount = BigDecimal.ZERO;
         for ( Transaction tx : transactionsFounded) {
-            usedAmount+= tx.getAmount();
+            usedAmount= usedAmount.add(tx.getAmount());
         }
 
         if(budgetRequest.getDateEnd().isBefore(LocalDateTime.now()))
@@ -51,7 +52,7 @@ public class BudgetServiceImpl implements BudgetService{
     }
 
     private static void validationBudgetLimitAmountAndDatesRanges(Budget budget) throws CustomException {
-        if(budget.getLimitAmount() <= 0)
+        if(budget.getLimitAmount().compareTo(BigDecimal.ZERO) <= 0)
             throw  new CustomException("El monto debe ser de tipo numérico y mayor a 0.");
 
         if(budget.getDateEnd().isBefore(budget.getDateBegin()) || budget.getDateEnd().isEqual(budget.getDateBegin()))
@@ -73,7 +74,7 @@ public class BudgetServiceImpl implements BudgetService{
         newBudget.setStatusOpen(true);
         newBudget.setDetail(budgetFounded.getDetail());
         newBudget.setLimitAmount(budgetFounded.getLimitAmount());
-        newBudget.setUsedAmount(0);
+        newBudget.setUsedAmount(BigDecimal.ZERO);
         newBudget.setCode(budgetFounded.getCode());
         newBudget.setDateBegin(budgetFounded.getDateEnd().plusDays(1));
         newBudget.setDateEnd(budgetFounded.getDateBegin().plusDays((int) ChronoUnit.DAYS.between(budgetFounded.getDateEnd(), budgetFounded.getDateBegin())));
@@ -123,9 +124,9 @@ public class BudgetServiceImpl implements BudgetService{
         List<Transaction> transactionsFounded = transactionRepository.findByWorkspaceIdAndCreateAtBetweenAndSubCategoryInAndBlock(budgetFounded.getWorkspaceId(), budgetRequest.getDateBegin(), budgetRequest.getDateEnd(), budgetRequest.getSubCategories(), BlockEnum.OUT);
         budgetFounded.setTransactions(transactionsFounded);
 
-        double usedAmount = 0.0;
+        BigDecimal usedAmount = BigDecimal.ZERO;
         for ( Transaction tx : transactionsFounded) {
-            usedAmount+= tx.getAmount();
+            usedAmount=usedAmount.add(tx.getAmount());
         }
 
         budgetFounded.setUsedAmount(usedAmount);

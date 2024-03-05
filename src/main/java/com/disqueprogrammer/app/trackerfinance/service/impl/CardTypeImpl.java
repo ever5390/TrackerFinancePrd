@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Objects;
 
 @AllArgsConstructor
-@NoArgsConstructor
 @Service
 public class CardTypeImpl implements CardTypeService {
 
@@ -49,6 +48,9 @@ public class CardTypeImpl implements CardTypeService {
 
         if(!Objects.equals(cardTypeFound.getId(), cardTypeId))
             throw new CustomException("El nombre ingresado ya existe, por favor ingrese otro.");
+
+        cardTypeRequest.setFixedParameter(false);
+
         return cardTypeRepository.save(cardTypeRequest);
     }
 

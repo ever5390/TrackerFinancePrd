@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private double amount;
+    private BigDecimal amount;
 
     private String description;
 
@@ -64,7 +65,7 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private BlockEnum block;
 
-    private double remaining;
+    private BigDecimal remaining;
 
     @ManyToMany
     @JoinTable(name = "tag_transaction", joinColumns = @JoinColumn(name = "fk_transaction"), inverseJoinColumns = @JoinColumn(name = "fk_tag"))

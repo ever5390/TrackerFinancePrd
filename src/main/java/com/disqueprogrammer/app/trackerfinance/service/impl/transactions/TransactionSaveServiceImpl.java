@@ -15,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -56,7 +58,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
     public Transaction save(Transaction transactionRequest) throws CustomException, InsuficientFundsException, UnspecifiedCounterpartException, AccountEqualsException {
 
         settingDefaultParameters(transactionRequest);
-        validationAmount(transactionRequest.getAmount());
+        validationAmount(transactionRequest);
         validCreateAt(transactionRequest.getCreateAt());
         transactionRequest.setSubCategory((validateCategory(transactionRequest)));
         transactionRequest.setAccount(validateOnlyAccount(transactionRequest.getAccount()));
@@ -104,14 +106,14 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
             validationOfEqualsAccounts(accountOrigin, accountDestiny);
 
-            double amountOriginAccount = accountOrigin.getCurrentBalance();
-            double amountDestinyAccount = accountDestiny.getCurrentBalance();
+            BigDecimal amountOriginAccount = accountOrigin.getCurrentBalance();
+            BigDecimal amountDestinyAccount = accountDestiny.getCurrentBalance();
 
-            amountOriginAccount = amountOriginAccount - transactionRequest.getAmount();
-            amountDestinyAccount = amountDestinyAccount + transactionRequest.getAmount();
+            amountOriginAccount = amountOriginAccount.subtract(transactionRequest.getAmount());
+            amountDestinyAccount = amountDestinyAccount.add(transactionRequest.getAmount());
 
-            accountOrigin.setCurrentBalance(amountOriginAccount);
-            accountDestiny.setCurrentBalance(amountDestinyAccount);
+            accountOrigin.setCurrentBalance(amountOriginAccount.setScale(2, RoundingMode.HALF_UP));
+            accountDestiny.setCurrentBalance(amountDestinyAccount.setScale(2, RoundingMode.HALF_UP));
 
             accountRepository.save(accountOrigin);
             accountRepository.save(accountDestiny);
@@ -141,7 +143,8 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
     }
 
     private void validateAccountBalanceAvailableForEnteredAmount(Transaction transactionRequest, Account account) throws InsuficientFundsException {
-        if (transactionRequest.getAction().equals(ActionEnum.REALICÉ) && transactionRequest.getAmount() > account.getCurrentBalance())  throw new InsuficientFundsException("Saldo no disponible en la cuenta origen para esta operación");
+        int comparisonResult = transactionRequest.getAmount().compareTo(account.getCurrentBalance());
+        if (transactionRequest.getAction().equals(ActionEnum.REALICÉ) && comparisonResult > 0)  throw new InsuficientFundsException("Saldo no disponible en la cuenta origen para esta operación");
     }
 
     private void validationOfEqualsAccounts(Account accountOrigin, Account accountDestiny) throws AccountEqualsException {
@@ -156,9 +159,11 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
     }
 
-    private void validationAmount(double amount) throws CustomException {
-        Double.parseDouble(String.valueOf(amount));
-        if (amount <= 0)  throw new CustomException("El monto de la operación debe ser mayor a cero.");
+    private void validationAmount(Transaction transactionReq) throws CustomException {
+        BigDecimal zero = BigDecimal.ZERO;
+        int comparisonResult = transactionReq.getAccount().getCurrentBalance().compareTo(zero);
+        if(comparisonResult <= 0)
+            throw new CustomException("El monto de la operación debe ser mayor a cero.");
     }
 
     private Account validateTransferAccount(Account accountReq, TypeEnum typeOperation, String operationType, Long workspaceId) throws CustomException {
@@ -233,7 +238,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         if (transactionRequest.getType().equals(TypeEnum.TRANSFERENCE)) {
             transactionRequest.setBlock(BlockEnum.NOT_APPLICABLE);
             transactionRequest.setAction(ActionEnum.NOT_APPLICABLE);
-            transactionRequest.setRemaining(0);
+            transactionRequest.setRemaining(BigDecimal.ZERO);
             transactionRequest.setCounterpart(null);
             transactionRequest.setSubCategory(null);
         }
@@ -241,7 +246,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         //For all types other than LOAN
         if (!TypeEnum.LOAN.equals(transactionRequest.getType())) {
             transactionRequest.setStatus(StatusEnum.NOT_APPLICABLE);
-            transactionRequest.setRemaining(0);
+            transactionRequest.setRemaining(BigDecimal.ZERO);
             transactionRequest.setCounterpart(null);
         }
 
@@ -300,23 +305,23 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
             if(transactionLoanAssoc == null)
                 throw new CustomException("El préstamo al que hace referencia el pago registrado no existe.");
 
-            if(!transactionLoanAssoc.getType().equals(TypeEnum.LOAN)) {
-                throw new CustomException("La transacción seleccionada como préstamo no es correcto, seleccione otro.");
-            }
+        validateTransactionAssoc(transactionLoanAssoc);
 
-            if(transactionRequest.getAction().equals(transactionLoanAssoc.getAction())) {
+        if(transactionRequest.getAction().equals(transactionLoanAssoc.getAction()) && transactionLoanAssoc.getType().equals(TypeEnum.LOAN)) {
                 throw new CustomException("La acción seleccionada para el pago y el préstamo son iguales(" + transactionRequest.getAction() + ") y deberían ser opuestos.");
             }
 
-            double currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
-            double newRemainingLoanAssoc = currentRemainingLoanAssoc - transactionRequest.getAmount();
+            BigDecimal currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
+            BigDecimal newRemainingLoanAssoc = currentRemainingLoanAssoc.subtract(transactionRequest.getAmount());
 
-            if(newRemainingLoanAssoc < 0) {
+            int comparisonResult = newRemainingLoanAssoc.compareTo(BigDecimal.ZERO);
+
+            if(comparisonResult < 0) {
                 throw new CustomException("El monto registrado en el pago supera al monto pendiente de pago " + currentRemainingLoanAssoc);
             }
 
             //update status if remaining is zero
-            if(newRemainingLoanAssoc == 0) {
+            if(comparisonResult == 0) {
                 transactionLoanAssoc.setStatus(StatusEnum.PAYED);
             }
 
@@ -328,23 +333,40 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     }
 
-    private static double getNewBalance(Transaction transactionRequest, Account account) throws InsuficientFundsException {
-        double currentBalance =  account.getCurrentBalance();
-        double newBalance = 0.0;
+    private static void validateTransactionAssoc(Transaction transactionLoanAssoc) throws CustomException {
+        LOG.info("transactionLoanAssoc encontrada:");
+        LOG.info(transactionLoanAssoc.toString());
+        //Solo los LOAN || (EXPENSE + TC) || TRANSFER + TC ORIGEN pasas, sino: mensaje error.
+        if(!TypeEnum.LOAN.equals(transactionLoanAssoc.getType())
+                && !TypeEnum.EXPENSE.equals(transactionLoanAssoc.getType())
+                && !TypeEnum.TRANSFERENCE.equals(transactionLoanAssoc.getType()) ) {
+            throw new CustomException("La transacción seleccionada asociada al registro de pago no concuerda con un tipo de operación pendiente válido, seleccione nuevamente.");
+        }
+
+        if(!transactionLoanAssoc.getType().equals(TypeEnum.LOAN) && !transactionLoanAssoc.getAccount().getCardType().isFixedParameter() ) {
+            throw new CustomException("La transacción seleccionada asociada al registro de pago no concuerda con un tipo de operación pendiente válido, seleccione nuevamente.");
+        }
+    }
+
+    private static BigDecimal getNewBalance(Transaction transactionRequest, Account account) throws InsuficientFundsException {
+
+        BigDecimal currentBalance =  account.getCurrentBalance();
+        BigDecimal newBalance = BigDecimal.ZERO;
 
         if(BlockEnum.IN.equals(transactionRequest.getBlock())) {
-            newBalance = currentBalance + transactionRequest.getAmount();
+            newBalance = currentBalance.add(transactionRequest.getAmount());
         }
 
         if(BlockEnum.OUT.equals(transactionRequest.getBlock())) {
-            newBalance = currentBalance - transactionRequest.getAmount();
+            newBalance = currentBalance.subtract(transactionRequest.getAmount());
         }
 
-        if(newBalance < 0) {
+        int comparisonResult = newBalance.compareTo(BigDecimal.ZERO);
+        if(comparisonResult <= 0) {
             throw new InsuficientFundsException("Saldo insuficiente para efectuar esta transacción");
         }
 
-        return newBalance;
+        return newBalance.setScale(2, RoundingMode.HALF_UP);
     }   
 
     @Override

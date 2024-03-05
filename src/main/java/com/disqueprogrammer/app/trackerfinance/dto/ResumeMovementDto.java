@@ -5,19 +5,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
 public class ResumeMovementDto {
 
-    private double totalIN;
+    private BigDecimal totalIN;
 
-    private double totalOUT;
+    private BigDecimal totalOUT;
 
-    private double totalTheyOweMe;
+    private BigDecimal totalTheyOweMe;
 
-    private double totalIOweYou;
+    private BigDecimal totalIOweYou;
 
     private List<Transaction> movememts;
 }

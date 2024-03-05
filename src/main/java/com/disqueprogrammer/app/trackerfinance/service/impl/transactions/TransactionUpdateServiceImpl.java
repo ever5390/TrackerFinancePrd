@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -43,7 +45,7 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
     @Override
     public Transaction update(Transaction transactionRequest, Long idTransaction) throws InsuficientFundsException, CustomException {
 
-            validateFormatAndCorrectValueAmount(transactionRequest.getAmount());
+            validateFormatAndCorrectValueAmount(transactionRequest);
             Transaction transactionFounded = transactionRepository.findByIdAndWorkspaceId(idTransaction, transactionRequest.getWorkspaceId());
             if (transactionFounded == null) throw new CustomException("No se encontró la transacción seleccionada");
 
@@ -59,8 +61,8 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
                     || (TypeEnum.EXPENSE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter())
                     || (TypeEnum.TRANSFERENCE.equals(transactionRequest.getType()) && transactionRequest.getAccount().getCardType().isFixedParameter()))  {
                 //Update remaining to LOAN
-                double newRemainingLoanAssoc = getNewRemainingByEditLoan(transactionRequest, transactionFounded);
-                if (newRemainingLoanAssoc == 0) transactionFounded.setStatus(StatusEnum.PAYED);
+                BigDecimal newRemainingLoanAssoc = getNewRemainingByEditLoan(transactionRequest, transactionFounded);
+                if (newRemainingLoanAssoc.compareTo(BigDecimal.ZERO) == 0) transactionFounded.setStatus(StatusEnum.PAYED);
                 transactionFounded.setRemaining(newRemainingLoanAssoc);
             }
 
@@ -71,9 +73,9 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
                 Transaction transactionLoanAssoc = transactionRepository.findById(idTransactionLoanAssoc).orElseThrow(()-> new CustomException("El prèstamo al que hace referencia el pago registrado no existe."));
 
                 //update remaining to loan associated
-                double newRemainingLoanAssoc = getNewRemainingLoanAssocByEditPayment(transactionRequest, transactionLoanAssoc, transactionFounded);
+                BigDecimal newRemainingLoanAssoc = getNewRemainingLoanAssocByEditPayment(transactionRequest, transactionLoanAssoc, transactionFounded);
 
-                if (newRemainingLoanAssoc == 0) {
+                if (newRemainingLoanAssoc.compareTo(BigDecimal.ZERO) == 0) {
                     transactionLoanAssoc.setStatus(StatusEnum.PAYED);
                 }
 
@@ -95,21 +97,19 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
 
     }
 
-    private void validateFormatAndCorrectValueAmount(double amount) throws CustomException {
-        try {
-            Double.parseDouble(String.valueOf(amount));
-            if (amount <= 0)  throw new CustomException("El monto de la operación debe ser mayor a cero.");
-        } catch (CustomException excepcion) {
-            throw new CustomException("Hubo un problema al intentar leer el monto de la operación a realizar");
-        }
+    private void validateFormatAndCorrectValueAmount( Transaction transactionReq) throws CustomException {
+
+        int comparisonResult = transactionReq.getAmount().compareTo(BigDecimal.ZERO);
+
+        if (comparisonResult <= 0)  throw new CustomException("El monto de la operación debe ser mayor a cero.");
     }
 
     private void reverseAndUpdateBalanceAvailableByUpdate(Transaction transactionRequest, Transaction transactionFounded) throws InsuficientFundsException {
         //Setting a new available amount in the account
         Long idAccount = transactionFounded.getAccount().getId();
         Account accountCurrent = accountRepository.findById(idAccount).get();
-        double newBalance = getNewBalanceAccountUpdate(transactionFounded, transactionRequest, accountCurrent);
-        accountCurrent.setCurrentBalance(newBalance);
+        BigDecimal newBalance = getNewBalanceAccountUpdate(transactionFounded, transactionRequest, accountCurrent);
+        accountCurrent.setCurrentBalance(newBalance.setScale(2, RoundingMode.HALF_UP));
 
         //update balance account
         accountRepository.save(accountCurrent);
@@ -122,96 +122,97 @@ public class TransactionUpdateServiceImpl implements ITransactionUpdateService {
         Account accountOrigin = accountRepository.findById(idAccountOrigin).get();
         Account accountDestiny = accountRepository.findById(idAccountDestiny).get();
 
-        double amountOriginAccount = accountOrigin.getCurrentBalance();
-        double amountDestinyAccount = accountDestiny.getCurrentBalance();
-        double amountCurrent = transactionFounded.getAmount();
-        double absDifferenceCurrentAmountAndNewAmount = Math.abs(amountCurrent - transactionRequest.getAmount());
+        BigDecimal amountOriginAccount = accountOrigin.getCurrentBalance();
+        BigDecimal amountDestinyAccount = accountDestiny.getCurrentBalance();
+        BigDecimal amountCurrent = transactionFounded.getAmount();
+        BigDecimal absDifferenceCurrentAmountAndNewAmount = (amountCurrent.subtract(transactionRequest.getAmount()).abs());
 
-        if (amountCurrent < transactionRequest.getAmount()) {
-            amountOriginAccount = amountOriginAccount - absDifferenceCurrentAmountAndNewAmount;
-            amountDestinyAccount = amountDestinyAccount + absDifferenceCurrentAmountAndNewAmount;
+        if (amountCurrent.compareTo(transactionRequest.getAmount()) < 0) {
+            amountOriginAccount = amountOriginAccount.subtract(absDifferenceCurrentAmountAndNewAmount);
+            amountDestinyAccount = amountDestinyAccount.add(absDifferenceCurrentAmountAndNewAmount);
 
-            if (amountOriginAccount < 0) {
+            if (amountOriginAccount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new InsuficientFundsException("Saldo insuficiente en la cuenta origen para este nuevo monto en la operación");
             }
 
         } else {
-            amountOriginAccount = amountOriginAccount + absDifferenceCurrentAmountAndNewAmount;
-            amountDestinyAccount = amountDestinyAccount - absDifferenceCurrentAmountAndNewAmount;
+            amountOriginAccount = amountOriginAccount.add(absDifferenceCurrentAmountAndNewAmount);
+            amountDestinyAccount = amountDestinyAccount.subtract(absDifferenceCurrentAmountAndNewAmount);
 
-            if (amountDestinyAccount < 0) {
+            if (amountDestinyAccount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new InsuficientFundsException("Saldo insuficiente en la cuenta destino para este nuevo monto en la operación");
             }
         }
 
         //Setter new balances
-        accountOrigin.setCurrentBalance(amountOriginAccount);
-        accountDestiny.setCurrentBalance(amountDestinyAccount);
+        accountOrigin.setCurrentBalance(amountOriginAccount.setScale(2, RoundingMode.HALF_UP));
+        accountDestiny.setCurrentBalance(amountDestinyAccount.setScale(2, RoundingMode.HALF_UP));
 
         accountRepository.save(accountOrigin);
         accountRepository.save(accountDestiny);
     }
 
-    private static double getNewRemainingByEditLoan(Transaction transactionRequest, Transaction transactionFound) throws CustomException {
-        double newRemainingLoan = 0;
-        double currentRemainingLoanAssoc = transactionFound.getRemaining();
-        double absDifferenceCurrentAmountAndNewAmount = Math.abs(transactionFound.getAmount() - transactionRequest.getAmount());
+    private static BigDecimal getNewRemainingByEditLoan(Transaction transactionRequest, Transaction transactionFound) throws CustomException {
+        BigDecimal newRemainingLoan = BigDecimal.ZERO;
+        BigDecimal currentRemainingLoanAssoc = transactionFound.getRemaining();
+        BigDecimal absDifferenceCurrentAmountAndNewAmount = (transactionFound.getAmount().subtract(transactionRequest.getAmount())).abs();
 
-        if(transactionRequest.getAmount() > transactionFound.getAmount()) {
-            newRemainingLoan = currentRemainingLoanAssoc + absDifferenceCurrentAmountAndNewAmount;
+        if(transactionRequest.getAmount().compareTo(transactionFound.getAmount()) > 0) {
+            newRemainingLoan = currentRemainingLoanAssoc.add(absDifferenceCurrentAmountAndNewAmount);
         } else {
-            newRemainingLoan = currentRemainingLoanAssoc - absDifferenceCurrentAmountAndNewAmount;
+            newRemainingLoan = currentRemainingLoanAssoc.subtract(absDifferenceCurrentAmountAndNewAmount);
         }
 
-        if (newRemainingLoan < 0) {
+        if (newRemainingLoan.compareTo(BigDecimal.ZERO) < 0) {
             throw new CustomException("El nuevo monto a actualizar termina siendo mayor al monto pendiente de pago del préstamos asociado por (S./" +  newRemainingLoan + ")");
         }
         return newRemainingLoan;
     }
 
-    private static double getNewRemainingLoanAssocByEditPayment(Transaction transactionRequest, Transaction transactionLoanAssoc, Transaction transactionFound) throws CustomException {
-        double newRemainingLoanAssoc = 0;
-        double currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
-        double absDifferenceCurrentAmountAndNewAmount = Math.abs(transactionFound.getAmount() - transactionRequest.getAmount());
+    private static BigDecimal getNewRemainingLoanAssocByEditPayment(Transaction transactionRequest, Transaction transactionLoanAssoc, Transaction transactionFound) throws CustomException {
+        BigDecimal newRemainingLoanAssoc = BigDecimal.ZERO;
+        BigDecimal currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
+        BigDecimal absDifferenceCurrentAmountAndNewAmount = (transactionFound.getAmount().subtract(transactionRequest.getAmount())).abs();
 
-        if(transactionFound.getAmount() < transactionRequest.getAmount()) {
-            newRemainingLoanAssoc = currentRemainingLoanAssoc + absDifferenceCurrentAmountAndNewAmount;
+        if(transactionFound.getAmount().compareTo(transactionRequest.getAmount()) < 0) {
+            newRemainingLoanAssoc = currentRemainingLoanAssoc.add(absDifferenceCurrentAmountAndNewAmount);
         } else {
-            newRemainingLoanAssoc = currentRemainingLoanAssoc - absDifferenceCurrentAmountAndNewAmount;
+            newRemainingLoanAssoc = currentRemainingLoanAssoc.subtract(absDifferenceCurrentAmountAndNewAmount);
         }
 
-        if (newRemainingLoanAssoc < 0) {
+        if (newRemainingLoanAssoc.compareTo(BigDecimal.ZERO) < 0) {
             throw new CustomException("El nuevo monto a actualizar termina siendo mayor al monto pendiente de pago del préstamos asociado por (S./" +  newRemainingLoanAssoc + ")");
         }
         return newRemainingLoanAssoc;
     }
 
-    private static double getNewBalanceAccountUpdate(Transaction transactionCurrent, Transaction transactionRequest, Account account) throws InsuficientFundsException {
+    private static BigDecimal getNewBalanceAccountUpdate(Transaction transactionCurrent, Transaction transactionRequest, Account account) throws InsuficientFundsException {
 
-        double newBalance = 0.0;
-        double currentBalance =  account.getCurrentBalance();
-        double absDifferenceCurrentAmountAndNewAmount = Math.abs(transactionCurrent.getAmount() - transactionRequest.getAmount());
+        BigDecimal newBalance = BigDecimal.ZERO;
+        BigDecimal currentBalance =  account.getCurrentBalance();
+        BigDecimal absDifferenceCurrentAmountAndNewAmount = (transactionCurrent.getAmount().subtract(transactionRequest.getAmount()).abs());
+
+        int comparisonResult = transactionCurrent.getAmount().compareTo(transactionRequest.getAmount());
 
         if(BlockEnum.IN.equals(transactionCurrent.getBlock())) {
-            if(transactionCurrent.getAmount() < transactionRequest.getAmount()) {
-                newBalance = currentBalance + absDifferenceCurrentAmountAndNewAmount;
+            if(comparisonResult < 0) {
+                newBalance = currentBalance.add(absDifferenceCurrentAmountAndNewAmount);
             } else {
-                newBalance = currentBalance - absDifferenceCurrentAmountAndNewAmount;
+                newBalance = currentBalance.subtract(absDifferenceCurrentAmountAndNewAmount);
             }
 
-            if (newBalance < 0) {
+            if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
                 throw new InsuficientFundsException("Saldo insuficiente para efectuar esta transacción");
             }
         }
 
         if(BlockEnum.OUT.equals(transactionRequest.getBlock())) {
-            if(transactionCurrent.getAmount() < transactionRequest.getAmount()) {
-                newBalance = currentBalance - absDifferenceCurrentAmountAndNewAmount;
+            if(comparisonResult < 0) {
+                newBalance = currentBalance.subtract(absDifferenceCurrentAmountAndNewAmount);
             } else {
-                newBalance = currentBalance + absDifferenceCurrentAmountAndNewAmount;
+                newBalance = currentBalance.add(absDifferenceCurrentAmountAndNewAmount);
             }
-
-            if (newBalance < 0) {
+            if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
                 throw new InsuficientFundsException("Saldo insuficiente para efectuar esta transacción");
             }
         }

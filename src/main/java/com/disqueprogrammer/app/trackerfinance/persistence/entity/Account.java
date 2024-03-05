@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @AllArgsConstructor
@@ -30,9 +31,9 @@ public class Account {
 
     private boolean fixedParameter;
 
-    private double beginBalance;
+    private BigDecimal beginBalance;
 
-    private double currentBalance;
+    private BigDecimal currentBalance;
 
     private boolean active;
 

@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -64,32 +65,36 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
 
         List<Transaction> transactions = transactionRepository.findAll(specification);
 
-        double totalIN = 0.0;
-        double totalOUT = 0.0;
-        double totalTheyOweMe = 0.0;
-        double totalIOweYou = 0.0;
+        BigDecimal totalIN = BigDecimal.ZERO;
+        BigDecimal totalOUT = BigDecimal.ZERO;
+        BigDecimal totalTheyOweMe = BigDecimal.ZERO;
+        BigDecimal totalIOweYou = BigDecimal.ZERO;
 
         for (Transaction transaction : transactions) {
             BlockEnum blockIN_OUT = transaction.getBlock();
-            double amountMov = transaction.getAmount();
+            BigDecimal amountMov = transaction.getAmount();
 
-            if (blockIN_OUT.equals(BlockEnum.IN)) totalIN += amountMov;
-            if (blockIN_OUT.equals(BlockEnum.OUT)) totalOUT += amountMov;
+            if (blockIN_OUT.equals(BlockEnum.IN)) totalIN = totalIN.add(amountMov);
+
+            if (blockIN_OUT.equals(BlockEnum.OUT)) totalOUT = totalOUT.add(amountMov);
+
 
             if(transaction.getType().equals(TypeEnum.LOAN) && transaction.getAction().equals(ActionEnum.REALICÉ)) {
-                totalTheyOweMe += transaction.getRemaining();
+                totalTheyOweMe = totalTheyOweMe.add(transaction.getRemaining());
             }
 
-            if(transaction.getType().equals(TypeEnum.LOAN) && transaction.getAction().equals(ActionEnum.RECIBÍ)) {
-                totalIOweYou += transaction.getRemaining();
+            if( (transaction.getType().equals(TypeEnum.LOAN) && transaction.getAction().equals(ActionEnum.RECIBÍ))
+                    || (TypeEnum.EXPENSE.equals(transaction.getType()) && transaction.getAccount().getCardType().isFixedParameter())
+                    || (TypeEnum.TRANSFERENCE.equals(transaction.getType()) && transaction.getAccount().getCardType().isFixedParameter()) ) {
+                totalIOweYou = totalIOweYou.add(transaction.getRemaining());
             }
 
             if (transaction.getType().equals(TypeEnum.TRANSFERENCE) && account != null) {
                 if (account.equalsIgnoreCase(transaction.getAccount().getName()))
-                    totalOUT += amountMov;
+                    totalOUT = totalOUT.add(amountMov);
 
                 if (account.equalsIgnoreCase(transaction.getAccountDestiny().getName()))
-                    totalIN += amountMov;
+                    totalIN = totalIN.add(amountMov);
             }
         }
 

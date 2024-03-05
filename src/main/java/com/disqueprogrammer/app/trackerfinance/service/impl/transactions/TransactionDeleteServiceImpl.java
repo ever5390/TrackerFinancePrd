@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Transactional
@@ -52,7 +54,7 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
 
             //Searching for transactions Payment type associated with this operation
             List<Transaction> paymentTransaction = transactionRepository.findPaymentsByLoanIdAssocAndWorkspaceId(transactionRequestId, transactionFounded.getWorkspaceId());
-            if(!paymentTransaction.isEmpty())  throw new CustomException("No es posible eliminar la transacción de tipo PRÉSTAMO ya que se encontraron pagos asociados a ella.");
+            if(!paymentTransaction.isEmpty())  throw new CustomException("No es posible eliminar la transacción ya que se encontraron pagos asociados a ella.");
         }
 
         if (TypeEnum.PAYMENT.equals(transactionFounded.getType())) {
@@ -70,20 +72,20 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
         Account accountOrigin = transactionFounded.getAccount();
         Account accountDestiny = transactionFounded.getAccount();
 
-        double amountOriginAccount = accountOrigin.getCurrentBalance();
-        double amountDestinyAccount = accountDestiny.getCurrentBalance();
+        BigDecimal amountOriginAccount = accountOrigin.getCurrentBalance();
+        BigDecimal amountDestinyAccount = accountDestiny.getCurrentBalance();
 
-        if (amountDestinyAccount < transactionFounded.getAmount()) {
+        if (amountDestinyAccount.compareTo(transactionFounded.getAmount()) < 0) {
             throw new InsuficientFundsException("Saldo no disponible en la cuenta destino para reversar la operación antes de eliminarla, aumente el saldo en la cuenta origen para proceder");
         }
 
-        amountOriginAccount = amountOriginAccount + transactionFounded.getAmount();
-        amountDestinyAccount = amountDestinyAccount - transactionFounded.getAmount();
+        amountOriginAccount = amountOriginAccount.add(transactionFounded.getAmount());
+        amountDestinyAccount = amountDestinyAccount.subtract(transactionFounded.getAmount());
 
 
         //update balances account
-        accountOrigin.setCurrentBalance(amountOriginAccount);
-        accountDestiny.setCurrentBalance(amountDestinyAccount);
+        accountOrigin.setCurrentBalance(amountOriginAccount.setScale(2, RoundingMode.HALF_UP));
+        accountDestiny.setCurrentBalance(amountDestinyAccount.setScale(2, RoundingMode.HALF_UP));
 
         accountRepository.save(accountOrigin);
         accountRepository.save(accountDestiny);
@@ -93,8 +95,8 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
         //Setting a new available amount in the account
         Long idAccount = transactionFounded.getAccount().getId();
         Account account = accountRepository.getReferenceById(idAccount);
-        double newBalance = getNewBalanceAccountReverseByDeleteTx(transactionFounded, account);
-        account.setCurrentBalance(newBalance);
+        BigDecimal newBalance = getNewBalanceAccountReverseByDeleteTx(transactionFounded, account);
+        account.setCurrentBalance(newBalance.setScale(2, RoundingMode.HALF_UP));
 
         //update balance account
         accountRepository.save(account);
@@ -103,8 +105,8 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
     private Transaction updateLoanAssocReverseByDeleteTx(Transaction transactionRequest) {
         Long idTransactionLoanAssoc = transactionRequest.getTransactionLoanAssocToPay().getId();
         Transaction transactionLoanAssoc = transactionRepository.findByIdAndWorkspaceId(idTransactionLoanAssoc, transactionRequest.getWorkspaceId());
-        double currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
-        double newRemainingLoanAssoc = currentRemainingLoanAssoc + transactionRequest.getAmount();
+        BigDecimal currentRemainingLoanAssoc = transactionLoanAssoc.getRemaining();
+        BigDecimal newRemainingLoanAssoc = currentRemainingLoanAssoc.add(transactionRequest.getAmount());
 
         //update status if remaining was zero
         if(StatusEnum.PAYED.equals(transactionLoanAssoc.getStatus())) {
@@ -117,19 +119,19 @@ public class TransactionDeleteServiceImpl implements ITransactionDeleteService {
         return transactionLoanAssoc;
     }
 
-    private static double getNewBalanceAccountReverseByDeleteTx(Transaction transactionFounded, Account account) throws InsuficientFundsException {
-        double currentBalance =  account.getCurrentBalance();
-        double newBalance = 0.0;
+    private static BigDecimal getNewBalanceAccountReverseByDeleteTx(Transaction transactionFounded, Account account) throws InsuficientFundsException {
+        BigDecimal currentBalance =  account.getCurrentBalance();
+        BigDecimal newBalance = BigDecimal.ZERO;
 
         if(BlockEnum.IN.equals(transactionFounded.getBlock())) {
-            newBalance = currentBalance - transactionFounded.getAmount();
+            newBalance = currentBalance.subtract(transactionFounded.getAmount());
         }
 
         if(BlockEnum.OUT.equals(transactionFounded.getBlock())) {
-            newBalance = currentBalance + transactionFounded.getAmount();
+            newBalance = currentBalance.add(transactionFounded.getAmount());
         }
 
-        if(newBalance < 0) {
+        if(newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw new InsuficientFundsException("Saldo insuficiente en la transacción asociada al registro actual");
         }
 
