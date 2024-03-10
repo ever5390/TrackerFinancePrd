@@ -50,10 +50,10 @@ public class AccountController extends ExceptionHandling {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws CustomException, AccountNotFoundException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idAccount) throws CustomException, AccountNotFoundException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         accountService.delete(idAccount, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}")

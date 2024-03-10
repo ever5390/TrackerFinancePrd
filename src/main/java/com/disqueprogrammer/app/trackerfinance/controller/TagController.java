@@ -37,10 +37,10 @@ public class TagController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTag) throws CustomException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTag) throws CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         tagService.delete(idTag, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

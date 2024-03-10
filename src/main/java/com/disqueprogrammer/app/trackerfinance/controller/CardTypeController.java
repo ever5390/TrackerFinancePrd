@@ -44,10 +44,10 @@ public class CardTypeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCardType) throws CustomException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCardType) throws CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         cardTypeService.delete(idCardType, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}")

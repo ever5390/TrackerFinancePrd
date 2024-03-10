@@ -37,10 +37,10 @@ public class BudgetController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idBudget) throws CustomException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idBudget) throws CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         budgetService.delete(idBudget, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

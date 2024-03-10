@@ -41,10 +41,10 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCategory) throws CategoryNotFoundException, CustomException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idCategory) throws CategoryNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         categoryService.delete(idCategory, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

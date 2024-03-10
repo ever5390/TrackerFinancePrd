@@ -43,10 +43,10 @@ public class PaymentMethodController extends ExceptionHandling {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idPaymentMethod) throws ObjectNotFoundException, CustomException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         paymentMethodService.delete(idPaymentMethod, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping

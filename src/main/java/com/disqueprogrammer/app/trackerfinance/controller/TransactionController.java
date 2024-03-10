@@ -54,14 +54,15 @@ public class TransactionController {
     }
 
     @PostMapping("/recurring")
-    public ResponseEntity<Void> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
+    public ResponseEntity<?> saveTxRecurring(@PathVariable("workspaceId") Long workspaceId, @RequestBody Transaction nextTransactionRecurring) throws Exception {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         nextTransactionRecurring.setWorkspaceId(workspaceId);
         nextTransactionRecurring.setResponsableUser(workspaceService.getUserAuhenticated());
         transactionSaveService.saveNewTransactionRecurring(nextTransactionRecurring);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
 
-       // return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
+
+        // return new ResponseEntity<String>("La(s) transacciones fueron creada(s) satisfactoriamente", HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -80,10 +81,10 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction) throws CustomException, InsuficientFundsException {
+    public ResponseEntity<?> delete(@PathVariable("workspaceId") Long workspaceId, @PathVariable("id") Long idTransaction) throws CustomException, InsuficientFundsException {
         workspaceService.validationWorkspaceUserRelationship(workspaceId);
         transactionDeleteService.delete(idTransaction, workspaceId);
-        return (ResponseEntity<Void>) ResponseEntity.status(HttpStatus.NO_CONTENT);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}")

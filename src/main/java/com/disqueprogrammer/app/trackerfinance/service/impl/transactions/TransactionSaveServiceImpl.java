@@ -335,7 +335,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
 
     private static void validateTransactionAssoc(Transaction transactionLoanAssoc) throws CustomException {
         LOG.info("transactionLoanAssoc encontrada:");
-        LOG.info(transactionLoanAssoc.toString());
+        //LOG.info(transactionLoanAssoc.toString());
         //Solo los LOAN || (EXPENSE + TC) || TRANSFER + TC ORIGEN pasas, sino: mensaje error.
         if(!TypeEnum.LOAN.equals(transactionLoanAssoc.getType())
                 && !TypeEnum.EXPENSE.equals(transactionLoanAssoc.getType())
