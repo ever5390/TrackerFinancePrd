@@ -1,15 +1,13 @@
 package com.disqueprogrammer.app.trackerfinance.controller;
 
+import com.disqueprogrammer.app.trackerfinance.dto.FiltersDTO;
 import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.AccountEqualsException;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.InsuficientFundsException;
 import com.disqueprogrammer.app.trackerfinance.exception.domain.UnspecifiedCounterpartException;
 import com.disqueprogrammer.app.trackerfinance.exception.generic.CustomException;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
-import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.WorkspaceService;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction.*;
 import jakarta.validation.Valid;
@@ -93,27 +91,15 @@ public class TransactionController {
         return new ResponseEntity<>(transactionGetService.findByIdAndWorkspaceId(idTransaction, workspaceId), HttpStatus.OK);
     }
 
-    @GetMapping("/filters")
+    @PostMapping("/filters")
     public ResponseEntity<ResumeMovementDto> findMovementsByFilters(
             @PathVariable("workspaceId") Long WorkspaceIdParam,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
-            @RequestParam(required = false) TypeEnum type,
-            @RequestParam(required = false) StatusEnum status,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) String segment,
-            @RequestParam(required = false) String account,
-            @RequestParam(required = false) String paymentMethod,
-            @RequestParam(required = false) BlockEnum block,
-            @RequestParam(required = false) ActionEnum action,
-            @RequestParam(required = false) String user
+            @RequestBody FiltersDTO filtersDTO
     ) throws Exception {
 
         workspaceService.validationWorkspaceUserRelationship(WorkspaceIdParam);
 
-        ResumeMovementDto resumeMovementDto = transactionFiltersService.findMovementsByFilters(WorkspaceIdParam, startDate,
-                endDate, type, status, category, description, segment, account, paymentMethod, block, action, user);
+        ResumeMovementDto resumeMovementDto = transactionFiltersService.findMovementsByFilters2(WorkspaceIdParam, filtersDTO);
         return new ResponseEntity<>(resumeMovementDto, HttpStatus.OK);
 
     }
@@ -133,6 +119,11 @@ public class TransactionController {
     @GetMapping("/loans-pending")
     public ResponseEntity<List<Transaction>> findByStatusAndWorkspaceId(@PathVariable("workspaceId") Long workspaceId, @RequestParam StatusEnum status) throws Exception {
         return new ResponseEntity<>(transactionGetService.findByStatusAndWorkspaceId(status, workspaceId), HttpStatus.OK);
+    }
+
+    @GetMapping("/filter-reload")
+    public ResponseEntity<FiltersDTO> filterReload(@PathVariable("workspaceId") Long workspaceId) throws Exception {
+        return new ResponseEntity<FiltersDTO>(transactionFiltersService.filterReload(workspaceId), HttpStatus.OK);
     }
 
 }

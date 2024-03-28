@@ -362,7 +362,7 @@ public class TransactionSaveServiceImpl implements ITransactionSaveService {
         }
 
         int comparisonResult = newBalance.compareTo(BigDecimal.ZERO);
-        if(comparisonResult <= 0) {
+        if(comparisonResult < 0) {
             throw new InsuficientFundsException("Saldo insuficiente para efectuar esta transacción");
         }
 

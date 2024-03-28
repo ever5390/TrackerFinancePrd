@@ -1,11 +1,17 @@
 package com.disqueprogrammer.app.trackerfinance.service.impl.transactions;
 
-import com.disqueprogrammer.app.trackerfinance.dto.ResumeMovementDto;
+import com.disqueprogrammer.app.trackerfinance.dto.*;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.Account;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.Category;
+import com.disqueprogrammer.app.trackerfinance.persistence.entity.SubCategory;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.Transaction;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.ActionEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.BlockEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.StatusEnum;
 import com.disqueprogrammer.app.trackerfinance.persistence.entity.enums.TypeEnum;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.AccountRepository;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.CategoryRepository;
+import com.disqueprogrammer.app.trackerfinance.persistence.repository.SubCategoryRepository;
 import com.disqueprogrammer.app.trackerfinance.persistence.repository.TransactionRepository;
 import com.disqueprogrammer.app.trackerfinance.persistence.specification.SearcherTransactionSpecification;
 import com.disqueprogrammer.app.trackerfinance.service.interfaz.transaction.ITransactionFiltersService;
@@ -18,18 +24,27 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TransactionFiltersServiceImpl implements ITransactionFiltersService {
 
     private final TransactionRepository transactionRepository;
 
+    private final CategoryRepository categoryRepository;
+    private final SubCategoryRepository subCategoryRepository;
+    private final AccountRepository accountRepository;
+
     public static final Logger LOGGER = LoggerFactory.getLogger(TransactionFiltersServiceImpl.class);
 
 
-    public TransactionFiltersServiceImpl(TransactionRepository transactionRepository) {
+    public TransactionFiltersServiceImpl(TransactionRepository transactionRepository, CategoryRepository categoryRepository, SubCategoryRepository subCategoryRepository, AccountRepository accountRepository) {
         this.transactionRepository = transactionRepository;
+        this.categoryRepository = categoryRepository;
+        this.subCategoryRepository = subCategoryRepository;
+        this.accountRepository = accountRepository;
     }
 
     private LocalDateTime getParseLocalDateIfValid(String dateTime) throws Exception {
@@ -47,21 +62,58 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
     }
 
     @Override
-    public ResumeMovementDto findMovementsByFilters(Long WorkspaceIdParam, String startDate, String endDate, TypeEnum type, StatusEnum status, String subCategory, String description, String segment, String account, String paymentMethod, BlockEnum block, ActionEnum action, String responsableUser) throws Exception {
+    public FiltersDTO filterReload(Long workspaceId) {
 
+        FiltersDTO filters = new FiltersDTO();
+
+        List<Account> accounts = accountRepository.findByWorkspaceId(workspaceId);
+        List<Category> categories = categoryRepository.findByWorkspaceId(workspaceId);
+        List<SubCategory> subCategories = subCategoryRepository.findByWorkspaceId(workspaceId);
+
+        ListItemFilter accountsFilters = new ListItemFilter();
+        ListItemFilter categoriesFilters = new ListItemFilter();
+        ListItemFilter subCategoriesFilters = new ListItemFilter();
+
+        for (Account account: accounts) {
+            ItemFilter accountItemFilter = new ItemFilter();
+            accountItemFilter.setName(account.getName());
+            accountsFilters.getItems().add(accountItemFilter);
+        }
+
+        for (Category category: categories) {
+            ItemFilter categoryItemFilter = new ItemFilter();
+            categoryItemFilter.setName(category.getName());
+            categoriesFilters.getItems().add(categoryItemFilter);
+        }
+
+        for (SubCategory subCategory: subCategories) {
+            ItemFilter subCategoryItemFilter = new ItemFilter();
+            subCategoryItemFilter.setName(subCategory.getName());
+            subCategoriesFilters.getItems().add(subCategoryItemFilter);
+        }
+
+        filters.setAccounts(accountsFilters);
+        filters.setCategories(categoriesFilters);
+        filters.setSubcategories(subCategoriesFilters);
+
+        return filters;
+    }
+
+    @Override
+    public ResumeMovementDto findMovementsByFilters2(Long workspaceIdParam, FiltersDTO filtersDTO) throws Exception {
         ResumeMovementDto resumeMovementDto = new ResumeMovementDto();
 
-        LocalDateTime startDateD = getParseLocalDateIfValid(startDate);
-        LocalDateTime endDateD = getParseLocalDateIfValid(endDate);
+        LocalDateTime startDateD = getParseLocalDateIfValid(filtersDTO.getStartDate());
+        LocalDateTime endDateD = getParseLocalDateIfValid(filtersDTO.getEndDate());
 
-        startDateD = startDateD==null?LocalDateTime.now().withDayOfMonth(1).with(LocalTime.MIN):startDateD;
-        endDateD = endDateD==null?LocalDateTime.now():endDateD;
+        filtersDTO.setWorkspaceIdParam(workspaceIdParam);
+        filtersDTO.setStartDateLDT(startDateD==null?LocalDateTime.now().withDayOfMonth(1).with(LocalTime.MIN):startDateD);
+        filtersDTO.setEndDateLDT(endDateD==null?LocalDateTime.now():endDateD);
 
         LOGGER.info("::: startDateD: "+startDateD);
         LOGGER.info("::: endDateD: "+endDateD);
 
-        SearcherTransactionSpecification specification = new SearcherTransactionSpecification(WorkspaceIdParam, startDateD,
-                endDateD, type, status, subCategory, description, account, paymentMethod, block, action, responsableUser);
+        SearcherTransactionSpecification specification = new SearcherTransactionSpecification(filtersDTO);
 
         List<Transaction> transactions = transactionRepository.findAll(specification);
 
@@ -89,13 +141,17 @@ public class TransactionFiltersServiceImpl implements ITransactionFiltersService
                 totalIOweYou = totalIOweYou.add(transaction.getRemaining());
             }
 
-            if (transaction.getType().equals(TypeEnum.TRANSFERENCE) && account != null) {
-                if (account.equalsIgnoreCase(transaction.getAccount().getName()))
+            //En caso se seleccione solo una cuenta entonces se contará cada transferencia como salida o entrada dependiendo de si es origen o receptor.
+
+            List<ItemFilter> items = filtersDTO.getAccounts().getItems().stream().filter(ItemFilter::isSelected).toList();
+            if (transaction.getType().equals(TypeEnum.TRANSFERENCE) && items.size() == 1) {
+                if (filtersDTO.getAccounts().getItems().get(0).getName().equalsIgnoreCase(transaction.getAccount().getName()))
                     totalOUT = totalOUT.add(amountMov);
 
-                if (account.equalsIgnoreCase(transaction.getAccountDestiny().getName()))
+                if (filtersDTO.getAccounts().getItems().get(0).getName().equalsIgnoreCase(transaction.getAccountDestiny().getName()))
                     totalIN = totalIN.add(amountMov);
             }
+
         }
 
         resumeMovementDto.setTotalIOweYou(totalIOweYou);

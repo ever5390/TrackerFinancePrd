@@ -124,6 +124,7 @@ public class AccountServiceImpl implements IAccountService {
             validateDuplicatedName(accountRequest);
 
         //Update params
+        accountFounded.setCardType(accountRequest.getCardType());
         accountFounded.setPaymentMethods(accountRequest.getPaymentMethods());
         accountFounded.setActive(accountRequest.isActive());
         accountFounded.setIcon(accountRequest.getIcon());
